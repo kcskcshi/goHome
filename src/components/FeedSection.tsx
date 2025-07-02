@@ -2,29 +2,32 @@
 
 import { useState, useEffect } from 'react';
 import FeedCard from './FeedCard';
-import { getTodayMoods, getTodayRecords } from '@/utils/storage';
 import { MoodData, CommuteRecord } from '@/types';
+import { useSupabase } from '@/hooks/useSupabase';
 
 export default function FeedSection() {
   const [todayMoods, setTodayMoods] = useState<MoodData[]>([]);
   const [todayRecords, setTodayRecords] = useState<CommuteRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'moods' | 'commutes'>('moods');
+  const { moods, commutes, loading } = useSupabase();
 
+  // 오늘 데이터 필터링
   useEffect(() => {
-    const loadData = () => {
-      const moods = getTodayMoods();
-      const records = getTodayRecords();
-      
-      setTodayMoods(moods.sort((a, b) => b.timestamp - a.timestamp));
-      setTodayRecords(records.sort((a, b) => b.timestamp - a.timestamp));
-      setIsLoading(false);
-    };
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const todayEnd = todayStart + 24 * 60 * 60 * 1000;
 
-    loadData();
-    const interval = setInterval(loadData, 30000); // 30초마다 업데이트
-    return () => clearInterval(interval);
-  }, []);
+    const todayMoodsData = moods.filter(mood => 
+      mood.timestamp >= todayStart && mood.timestamp < todayEnd
+    ).sort((a, b) => b.timestamp - a.timestamp);
+
+    const todayCommutesData = commutes.filter(record => 
+      record.timestamp >= todayStart && record.timestamp < todayEnd
+    ).sort((a, b) => b.timestamp - a.timestamp);
+
+    setTodayMoods(todayMoodsData);
+    setTodayRecords(todayCommutesData);
+  }, [moods, commutes]);
 
   const formatTime = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString('ko-KR', {
@@ -33,7 +36,7 @@ export default function FeedSection() {
     });
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="bg-github-card border border-github-border rounded-lg p-6">
         <div className="flex items-center justify-center h-32">

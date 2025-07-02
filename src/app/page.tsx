@@ -6,7 +6,7 @@ import MoodInput from '@/components/MoodInput';
 import StatsChart from '@/components/StatsChart';
 import FeedSection from '@/components/FeedSection';
 import { useCommute } from '@/hooks/useCommute';
-import { saveMoodData } from '@/utils/storage';
+import { useSupabase } from '@/hooks/useSupabase';
 
 export default function Home() {
   const { 
@@ -19,6 +19,7 @@ export default function Home() {
     hasLeftToday 
   } = useCommute();
   
+  const { addMood } = useSupabase();
   const [isMoodLoading, setIsMoodLoading] = useState(false);
 
   // 다크모드 강제 적용
@@ -44,7 +45,7 @@ export default function Home() {
         nickname,
       };
       
-      saveMoodData(moodData);
+      await addMood(moodData);
       
       // 성공 메시지 (실제로는 토스트나 알림 사용)
       alert('기분이 성공적으로 공유되었습니다!');

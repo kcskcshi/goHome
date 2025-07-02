@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { CommuteRecord } from '@/types';
-import { saveCommuteRecord, getTodayRecords } from '@/utils/storage';
 import { generateNickname, getStoredNickname, setStoredNickname } from '@/utils/nickname';
+import { useSupabase } from './useSupabase';
 
 export function useCommute() {
   const [todayRecords, setTodayRecords] = useState<CommuteRecord[]>([]);
   const [nickname, setNickname] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const { commutes, addCommute } = useSupabase();
 
   useEffect(() => {
     // 닉네임 초기화
@@ -20,25 +21,31 @@ export function useCommute() {
       setNickname(newNickname);
       setStoredNickname(newNickname);
     }
-
-    // 오늘 기록 로드
-    setTodayRecords(getTodayRecords());
   }, []);
+
+  // 오늘 기록 필터링
+  useEffect(() => {
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const todayEnd = todayStart + 24 * 60 * 60 * 1000;
+
+    const todayCommutes = commutes.filter(record => 
+      record.timestamp >= todayStart && record.timestamp < todayEnd
+    );
+    setTodayRecords(todayCommutes);
+  }, [commutes]);
 
   const recordCommute = async (type: '출근' | '퇴근') => {
     setIsLoading(true);
     
     try {
-      const record: CommuteRecord = {
-        id: `${Date.now()}-${Math.random()}`,
+      const record: Omit<CommuteRecord, 'id'> = {
         type,
         timestamp: Date.now(),
         nickname,
       };
 
-      saveCommuteRecord(record);
-      setTodayRecords(getTodayRecords());
-      
+      await addCommute(record);
       return record;
     } catch (error) {
       console.error('Failed to record commute:', error);
