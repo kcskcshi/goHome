@@ -6,8 +6,8 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  assetPrefix: '',
-  basePath: '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/goHome/' : '',
+  basePath: process.env.NODE_ENV === 'production' ? '/goHome' : '',
   experimental: {
     esmExternals: false,
   },
