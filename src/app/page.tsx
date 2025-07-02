@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import CommuteButton from '@/components/CommuteButton';
 import MoodInput from '@/components/MoodInput';
 import StatsChart from '@/components/StatsChart';
@@ -124,7 +123,7 @@ export default function Home() {
       <footer className="border-t border-github-border bg-github-card mt-12">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="text-center text-github-muted text-sm">
-            <p>"오늘도 출근했습니다. 그리고 기분은요..."</p>
+            <p>&ldquo;오늘도 출근했습니다. 그리고 기분은요...&rdquo;</p>
             <p className="mt-2">© 2024 아 집에가고싶다</p>
           </div>
         </div>

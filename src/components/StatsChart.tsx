@@ -112,7 +112,7 @@ export default function StatsChart() {
           <div>
             <h3 className="text-github-text text-sm font-medium mb-3">😊 기분 분포</h3>
             <div className="space-y-2">
-              {stats.moodDistribution.map((mood, index) => {
+              {stats.moodDistribution.map((mood) => {
                 const percentage = (mood.count / getMaxCount(stats.moodDistribution)) * 100;
                 return (
                   <div key={mood.emoji} className="flex items-center space-x-3">
