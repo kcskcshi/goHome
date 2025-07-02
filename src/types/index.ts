@@ -1,5 +1,6 @@
 export interface CommuteRecord {
   id: string;
+  uuid: string;
   type: '출근' | '퇴근';
   timestamp: number;
   nickname: string;

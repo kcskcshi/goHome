@@ -70,4 +70,14 @@ export function getTodayMoods(): MoodData[] {
     const moodDate = new Date(mood.timestamp).toDateString();
     return moodDate === today;
   });
+}
+
+export function getStoredUuid(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('go-home-uuid');
+}
+
+export function setStoredUuid(uuid: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('go-home-uuid', uuid);
 } 

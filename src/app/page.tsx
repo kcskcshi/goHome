@@ -16,10 +16,11 @@ export default function Home() {
     getTodayCommute, 
     getTodayLeave, 
     hasCommutedToday, 
-    hasLeftToday 
+    hasLeftToday,
+    uuid
   } = useCommute();
   
-  const { addMood } = useSupabase();
+  const { addMood, commutes, moods } = useSupabase();
   const [isMoodLoading, setIsMoodLoading] = useState(false);
 
   // 다크모드 강제 적용
@@ -113,7 +114,7 @@ export default function Home() {
           />
 
           {/* 통계 차트 */}
-          <StatsChart />
+          <StatsChart commutes={commutes} moods={moods} myUuid={uuid} />
 
           {/* 피드 섹션 */}
           <FeedSection />

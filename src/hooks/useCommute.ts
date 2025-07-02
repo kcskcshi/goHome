@@ -3,11 +3,14 @@
 import { useState, useEffect } from 'react';
 import { CommuteRecord } from '@/types';
 import { generateNickname, getStoredNickname, setStoredNickname } from '@/utils/nickname';
+import { getStoredUuid, setStoredUuid } from '@/utils/storage';
+import { v4 as uuidv4 } from 'uuid';
 import { useSupabase } from './useSupabase';
 
 export function useCommute() {
   const [todayRecords, setTodayRecords] = useState<CommuteRecord[]>([]);
   const [nickname, setNickname] = useState<string>('');
+  const [uuid, setUuid] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const { commutes, addCommute } = useSupabase();
 
@@ -21,6 +24,15 @@ export function useCommute() {
       setNickname(newNickname);
       setStoredNickname(newNickname);
     }
+    // uuid 초기화
+    const storedUuid = getStoredUuid();
+    if (!storedUuid) {
+      const newUuid = uuidv4();
+      setStoredUuid(newUuid);
+      setUuid(newUuid);
+    } else {
+      setUuid(storedUuid);
+    }
   }, []);
 
   // 오늘 기록 필터링
@@ -30,16 +42,18 @@ export function useCommute() {
     const todayEnd = todayStart + 24 * 60 * 60 * 1000;
 
     const todayCommutes = commutes.filter(record => 
+      record.uuid === uuid &&
       record.timestamp >= todayStart && record.timestamp < todayEnd
     );
     setTodayRecords(todayCommutes);
-  }, [commutes]);
+  }, [commutes, uuid]);
 
   const recordCommute = async (type: '출근' | '퇴근') => {
     setIsLoading(true);
     
     try {
       const record: Omit<CommuteRecord, 'id'> = {
+        uuid,
         type,
         timestamp: Date.now(),
         nickname,
@@ -64,11 +78,11 @@ export function useCommute() {
   };
 
   const hasCommutedToday = () => {
-    return todayRecords.some(record => record.type === '출근');
+    return Array.isArray(todayRecords) && todayRecords.some(record => record.type === '출근');
   };
 
   const hasLeftToday = () => {
-    return todayRecords.some(record => record.type === '퇴근');
+    return Array.isArray(todayRecords) && todayRecords.some(record => record.type === '퇴근');
   };
 
   return {
@@ -80,5 +94,6 @@ export function useCommute() {
     getTodayLeave,
     hasCommutedToday,
     hasLeftToday,
+    uuid,
   };
 } 

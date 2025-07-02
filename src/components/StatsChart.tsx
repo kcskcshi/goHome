@@ -1,78 +1,113 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getTodayRecords, getTodayMoods } from '@/utils/storage';
+import { CommuteRecord, MoodData } from '@/types';
 
 interface StatsData {
   totalUsers: number;
   earlyBird: string;
   nightOwl: string;
   moodDistribution: { emoji: string; count: number }[];
-  commuteTimes: { hour: number; count: number }[];
+  commuteTimesGo: { hour: number; count: number }[];
+  commuteTimesLeave: { hour: number; count: number }[];
+  myGoRank: number | null;
+  myLeaveRank: number | null;
+  goTotal: number;
+  leaveTotal: number;
 }
 
-export default function StatsChart() {
+interface StatsChartProps {
+  commutes: CommuteRecord[];
+  moods: MoodData[];
+  myUuid: string;
+}
+
+export default function StatsChart({ commutes, moods, myUuid }: StatsChartProps) {
   const [stats, setStats] = useState<StatsData>({
     totalUsers: 0,
     earlyBird: '아직 없음',
     nightOwl: '아직 없음',
     moodDistribution: [],
-    commuteTimes: []
+    commuteTimesGo: [],
+    commuteTimesLeave: [],
+    myGoRank: null,
+    myLeaveRank: null,
+    goTotal: 0,
+    leaveTotal: 0,
   });
 
   useEffect(() => {
-    const loadStats = () => {
-      const records = getTodayRecords();
-      const moods = getTodayMoods();
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const todayEnd = todayStart + 24 * 60 * 60 * 1000;
 
-      // 참여자 수
-      const totalUsers = new Set([
-        ...moods.map(m => m.nickname),
-        ...records.map(r => r.nickname)
-      ]).size;
+    // 오늘 기록만 필터링
+    const todayRecords = commutes.filter(r => r.timestamp >= todayStart && r.timestamp < todayEnd);
+    const todayMoods = moods.filter(m => m.timestamp >= todayStart && m.timestamp < todayEnd);
 
-      // 출근왕/칼퇴왕
-      const earlyBird = records
-        .filter(r => r.type === '출근')
-        .sort((a, b) => a.timestamp - b.timestamp)[0];
+    // 출근/퇴근 분리
+    const goRecords = todayRecords.filter(r => r.type === '출근').sort((a, b) => a.timestamp - b.timestamp);
+    const leaveRecords = todayRecords.filter(r => r.type === '퇴근').sort((a, b) => a.timestamp - b.timestamp);
 
-      const nightOwl = records
-        .filter(r => r.type === '퇴근')
-        .sort((a, b) => b.timestamp - a.timestamp)[0];
+    // 내 출근/퇴근 순위
+    const myGoIdx = goRecords.findIndex(r => r.uuid === myUuid);
+    const myLeaveIdx = leaveRecords.findIndex(r => r.uuid === myUuid);
+    const myGoRank = myGoIdx >= 0 ? myGoIdx + 1 : null;
+    const myLeaveRank = myLeaveIdx >= 0 ? myLeaveIdx + 1 : null;
 
-      // 기분 분포
-      const moodCounts: { [key: string]: number } = {};
-      moods.forEach(mood => {
-        moodCounts[mood.emoji] = (moodCounts[mood.emoji] || 0) + 1;
-      });
-      const moodDistribution = Object.entries(moodCounts)
-        .map(([emoji, count]) => ({ emoji, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
+    // 참여자 수 (uuid 기준)
+    const totalUsers = new Set([
+      ...todayMoods.map(m => m.nickname),
+      ...todayRecords.map(r => r.nickname)
+    ]).size;
 
-      // 출퇴근 시간 분포
-      const hourCounts: { [key: number]: number } = {};
-      records.forEach(record => {
-        const hour = new Date(record.timestamp).getHours();
-        hourCounts[hour] = (hourCounts[hour] || 0) + 1;
-      });
-      const commuteTimes = Object.entries(hourCounts)
-        .map(([hour, count]) => ({ hour: parseInt(hour), count }))
-        .sort((a, b) => a.hour - b.hour);
+    // 출근왕/칼퇴왕
+    const earlyBird = goRecords[0];
+    const nightOwl = leaveRecords[leaveRecords.length - 1];
 
-      setStats({
-        totalUsers,
-        earlyBird: earlyBird?.nickname || '아직 없음',
-        nightOwl: nightOwl?.nickname || '아직 없음',
-        moodDistribution,
-        commuteTimes
-      });
-    };
+    // 기분 분포
+    const moodCounts: { [key: string]: number } = {};
+    todayMoods.forEach(mood => {
+      moodCounts[mood.emoji] = (moodCounts[mood.emoji] || 0) + 1;
+    });
+    const moodDistribution = Object.entries(moodCounts)
+      .map(([emoji, count]) => ({ emoji, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
 
-    loadStats();
-    const interval = setInterval(loadStats, 30000); // 30초마다 업데이트
-    return () => clearInterval(interval);
-  }, []);
+    // 출근 시간 분포
+    const hourCountsGo: { [key: number]: number } = {};
+    goRecords.forEach(record => {
+      const hour = new Date(record.timestamp).getHours();
+      hourCountsGo[hour] = (hourCountsGo[hour] || 0) + 1;
+    });
+    const commuteTimesGo = Object.entries(hourCountsGo)
+      .map(([hour, count]) => ({ hour: parseInt(hour), count }))
+      .sort((a, b) => a.hour - b.hour);
+
+    // 퇴근 시간 분포
+    const hourCountsLeave: { [key: number]: number } = {};
+    leaveRecords.forEach(record => {
+      const hour = new Date(record.timestamp).getHours();
+      hourCountsLeave[hour] = (hourCountsLeave[hour] || 0) + 1;
+    });
+    const commuteTimesLeave = Object.entries(hourCountsLeave)
+      .map(([hour, count]) => ({ hour: parseInt(hour), count }))
+      .sort((a, b) => a.hour - b.hour);
+
+    setStats({
+      totalUsers,
+      earlyBird: earlyBird?.nickname || '아직 없음',
+      nightOwl: nightOwl?.nickname || '아직 없음',
+      moodDistribution,
+      commuteTimesGo,
+      commuteTimesLeave,
+      myGoRank,
+      myLeaveRank,
+      goTotal: goRecords.length,
+      leaveTotal: leaveRecords.length,
+    });
+  }, [commutes, moods, myUuid]);
 
   const getMaxCount = (data: { count: number }[]) => {
     return Math.max(...data.map(d => d.count), 1);
@@ -81,7 +116,15 @@ export default function StatsChart() {
   return (
     <div className="bg-github-card border border-github-border rounded-lg p-6">
       <h2 className="text-github-text font-medium mb-6">📊 오늘의 통계</h2>
-      
+      {/* 내 출근/퇴근 순위 */}
+      {(stats.myGoRank || stats.myLeaveRank) && (
+        <div className="mb-4 text-center">
+          <span className="font-bold text-github-green">{stats.myGoRank ? `출근 ${stats.myGoRank}등` : ''}</span>
+          {stats.myGoRank && stats.myLeaveRank && <span className="mx-2">|</span>}
+          <span className="font-bold text-purple-500">{stats.myLeaveRank ? `퇴근 ${stats.myLeaveRank}등` : ''}</span>
+          <span className="ml-2 text-github-muted text-xs">(출근 {stats.goTotal}명, 퇴근 {stats.leaveTotal}명)</span>
+        </div>
+      )}
       <div className="space-y-6">
         {/* 기본 통계 */}
         <div className="grid grid-cols-3 gap-4">
@@ -112,7 +155,7 @@ export default function StatsChart() {
           <div>
             <h3 className="text-github-text text-sm font-medium mb-3">😊 기분 분포</h3>
             <div className="space-y-2">
-              {stats.moodDistribution.map((mood) => {
+              {stats.moodDistribution.map((mood: { emoji: string; count: number }) => {
                 const percentage = (mood.count / getMaxCount(stats.moodDistribution)) * 100;
                 return (
                   <div key={mood.emoji} className="flex items-center space-x-3">
@@ -135,20 +178,62 @@ export default function StatsChart() {
           </div>
         )}
 
-        {/* 출퇴근 시간 분포 */}
-        {stats.commuteTimes.length > 0 && (
+        {/* 출근 시간 분포 */}
+        {stats.commuteTimesGo.length > 0 && (
           <div>
-            <h3 className="text-github-text text-sm font-medium mb-3">⏰ 출퇴근 시간 분포</h3>
+            <h3 className="text-github-text text-sm font-medium mb-3">🌅 출근 시간 분포</h3>
             <div className="flex items-end space-x-1 h-20">
               {Array.from({ length: 24 }, (_, hour) => {
-                const count = stats.commuteTimes.find(t => t.hour === hour)?.count || 0;
-                const height = count > 0 ? (count / getMaxCount(stats.commuteTimes)) * 100 : 0;
+                const count = stats.commuteTimesGo.find((t) => t.hour === hour)?.count || 0;
+                const height = count > 0 ? (count / (stats.goTotal || 1)) * 100 : 0;
                 return (
                   <div key={hour} className="flex-1 flex flex-col items-center">
-                    <div 
-                      className="bg-gradient-to-t from-github-green to-green-400 rounded-t w-full transition-all duration-500"
-                      style={{ height: `${height}%` }}
-                    />
+                    {count > 0 ? (
+                      <>
+                        <div
+                          className="bg-gradient-to-t from-green-600 to-green-800 rounded-t w-full transition-all duration-500 min-h-[10px] border border-green-900"
+                          style={{ height: `${height}%` }}
+                        />
+                        <div className="text-xs font-bold text-green-200 -mt-5 mb-1 text-center select-none" style={{ zIndex: 1 }}>
+                          {count}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="w-full" style={{ height: 0 }} />
+                    )}
+                    <div className="text-github-muted text-xs mt-1">
+                      {hour.toString().padStart(2, '0')}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 퇴근 시간 분포 */}
+        {stats.commuteTimesLeave.length > 0 && (
+          <div>
+            <h3 className="text-github-text text-sm font-medium mb-3">🌙 퇴근 시간 분포</h3>
+            <div className="flex items-end space-x-1 h-20">
+              {Array.from({ length: 24 }, (_, hour) => {
+                const count = stats.commuteTimesLeave.find((t) => t.hour === hour)?.count || 0;
+                const height = count > 0 ? (count / (stats.leaveTotal || 1)) * 100 : 0;
+                return (
+                  <div key={hour} className="flex-1 flex flex-col items-center">
+                    {count > 0 ? (
+                      <>
+                        <div
+                          className="bg-gradient-to-t from-red-600 to-red-800 rounded-t w-full transition-all duration-500 min-h-[10px] border border-red-900"
+                          style={{ height: `${height}%` }}
+                        />
+                        <div className="text-xs font-bold text-red-200 -mt-5 mb-1 text-center select-none" style={{ zIndex: 1 }}>
+                          {count}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="w-full" style={{ height: 0 }} />
+                    )}
                     <div className="text-github-muted text-xs mt-1">
                       {hour.toString().padStart(2, '0')}
                     </div>
