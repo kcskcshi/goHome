@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
+  assetPrefix: '',
+  basePath: '',
   experimental: {
     esmExternals: false,
   },
