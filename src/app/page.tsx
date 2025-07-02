@@ -1,102 +1,133 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import CommuteButton from '@/components/CommuteButton';
+import MoodInput from '@/components/MoodInput';
+import StatsChart from '@/components/StatsChart';
+import FeedSection from '@/components/FeedSection';
+import { useCommute } from '@/hooks/useCommute';
+import { saveMoodData } from '@/utils/storage';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const { 
+    nickname, 
+    isLoading: commuteLoading, 
+    recordCommute, 
+    getTodayCommute, 
+    getTodayLeave, 
+    hasCommutedToday, 
+    hasLeftToday 
+  } = useCommute();
+  
+  const [isMoodLoading, setIsMoodLoading] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // 다크모드 강제 적용
+  useEffect(() => {
+    document.documentElement.classList.add('dark');
+  }, []);
+
+  const handleCommute = async (type: '출근' | '퇴근') => {
+    try {
+      await recordCommute(type);
+    } catch (error) {
+      console.error('Commute recording failed:', error);
+    }
+  };
+
+  const handleMoodSubmit = async (emoji: string, message: string) => {
+    setIsMoodLoading(true);
+    try {
+      const moodData = {
+        emoji,
+        message,
+        timestamp: Date.now(),
+        nickname,
+      };
+      
+      saveMoodData(moodData);
+      
+      // 성공 메시지 (실제로는 토스트나 알림 사용)
+      alert('기분이 성공적으로 공유되었습니다!');
+    } catch (error) {
+      console.error('Mood submission failed:', error);
+      alert('기분 공유에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsMoodLoading(false);
+    }
+  };
+
+  const formatTime = (timestamp: number) => {
+    return new Date(timestamp).toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-github-bg text-github-text">
+      {/* 헤더 */}
+      <header className="border-b border-github-border bg-github-card">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="text-2xl">🏠</div>
+              <h1 className="text-xl font-bold">아 집에가고싶다</h1>
+            </div>
+            <div className="text-github-muted text-sm">
+              {nickname}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* 메인 컨텐츠 */}
+      <main className="max-w-4xl mx-auto px-4 py-8">
+        <div className="space-y-6">
+          {/* 출근/퇴근 버튼 */}
+          <div className="bg-github-card border border-github-border rounded-lg p-6">
+            <h2 className="text-github-text font-medium mb-4">오늘의 출퇴근</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CommuteButton
+                type="출근"
+                onClick={() => handleCommute('출근')}
+                isLoading={commuteLoading}
+                hasRecorded={hasCommutedToday()}
+                recordTime={getTodayCommute() ? formatTime(getTodayCommute()!.timestamp) : undefined}
+              />
+              <CommuteButton
+                type="퇴근"
+                onClick={() => handleCommute('퇴근')}
+                isLoading={commuteLoading}
+                hasRecorded={hasLeftToday()}
+                recordTime={getTodayLeave() ? formatTime(getTodayLeave()!.timestamp) : undefined}
+              />
+            </div>
+          </div>
+
+          {/* 기분 입력 */}
+          <MoodInput
+            onSubmit={handleMoodSubmit}
+            isLoading={isMoodLoading}
+            disabled={commuteLoading}
+          />
+
+          {/* 통계 차트 */}
+          <StatsChart />
+
+          {/* 피드 섹션 */}
+          <FeedSection />
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+
+      {/* 푸터 */}
+      <footer className="border-t border-github-border bg-github-card mt-12">
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          <div className="text-center text-github-muted text-sm">
+            <p>"오늘도 출근했습니다. 그리고 기분은요..."</p>
+            <p className="mt-2">© 2024 아 집에가고싶다</p>
+          </div>
+        </div>
       </footer>
     </div>
   );
