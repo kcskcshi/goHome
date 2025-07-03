@@ -94,6 +94,15 @@ export default function MoodHeatmap({ moods }: MoodHeatmapProps) {
         />
       </div>
       
+      {/* 꼬맨틀 게임 컴포넌트 자리 */}
+      <div className="bg-github-card border border-github-border rounded-lg p-4 mt-6">
+        <h3 className="text-github-text font-bold mb-2">꼬맨틀(Commantle) 게임</h3>
+        <div className="text-github-muted text-sm mb-2">오늘의 제시어를 맞혀보세요!<br/>정답을 맞히면 더 이상 입력할 수 없습니다.</div>
+        <input type="text" className="w-full border border-github-border rounded px-2 py-1 mb-2 bg-github-bg text-github-text" placeholder="한 줄 멘트를 입력하세요" disabled />
+        <button className="w-full bg-github-green text-white rounded py-1 font-bold opacity-60 cursor-not-allowed" disabled>제출</button>
+        <div className="text-github-muted text-xs mt-2">(데모) 정식 게임 기능은 곧 추가됩니다.</div>
+      </div>
+      
       <style jsx>{`
         :global(.react-calendar-heatmap) {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
