@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import CalendarHeatmap from 'react-calendar-heatmap';
 import 'react-calendar-heatmap/dist/styles.css';
 import { MoodData } from '@/types';
-import GameSimilarity from './GameSimilarity';
 
 interface MoodHeatmapProps {
   moods: MoodData[];
@@ -94,14 +93,6 @@ export default function MoodHeatmap({ moods }: MoodHeatmapProps) {
           }}
         />
       </div>
-      
-      <GameSimilarity similarities={[
-        { name: '워들', percent: 92 },
-        { name: '밸런스게임', percent: 85 },
-        { name: '밈퀴즈', percent: 77 },
-        { name: '심리테스트', percent: 60 },
-        { name: '직장인톡', percent: 41 },
-      ]} />
       
       <style jsx>{`
         :global(.react-calendar-heatmap) {
