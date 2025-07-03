@@ -7,6 +7,7 @@ import StatsChart from '@/components/StatsChart';
 import FeedSection from '@/components/FeedSection';
 import { useCommute } from '@/hooks/useCommute';
 import { useSupabase } from '@/hooks/useSupabase';
+import MoodHeatmap from '@/components/MoodHeatmap';
 
 export default function Home() {
   const { 
@@ -83,41 +84,75 @@ export default function Home() {
       </header>
 
       {/* 메인 컨텐츠 */}
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="space-y-6">
-          {/* 출근/퇴근 버튼 */}
-          <div className="bg-github-card border border-github-border rounded-lg p-6">
-            <h2 className="text-github-text font-medium mb-4">오늘의 출퇴근</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <CommuteButton
-                type="출근"
-                onClick={() => handleCommute('출근')}
-                isLoading={commuteLoading}
-                hasRecorded={hasCommutedToday()}
-                recordTime={getTodayCommute() ? formatTime(getTodayCommute()!.timestamp) : undefined}
-              />
-              <CommuteButton
-                type="퇴근"
-                onClick={() => handleCommute('퇴근')}
-                isLoading={commuteLoading}
-                hasRecorded={hasLeftToday()}
-                recordTime={getTodayLeave() ? formatTime(getTodayLeave()!.timestamp) : undefined}
-              />
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* 좌측 사이드바 - 프로필 영역 */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* 프로필 카드 */}
+            <div className="bg-github-card border border-github-border rounded-lg p-6">
+              <div className="text-center">
+                <div className="w-24 h-24 bg-github-green rounded-full flex items-center justify-center text-3xl font-bold text-white mx-auto mb-4">
+                  {nickname.charAt(0).toUpperCase()}
+                </div>
+                <h2 className="text-github-text font-bold text-lg mb-2">{nickname}</h2>
+                <p className="text-github-muted text-sm mb-4">개발자 • 데이터 분석가</p>
+                {/* 오늘 출퇴근 상태 */}
+                <div className="space-y-2 text-sm">
+                  {getTodayCommute() && (
+                    <div className="flex items-center justify-between p-2 bg-github-bg rounded">
+                      <span className="text-github-muted">출근</span>
+                      <span className="text-github-green font-medium">
+                        {formatTime(getTodayCommute()!.timestamp)}
+                      </span>
+                    </div>
+                  )}
+                  {getTodayLeave() && (
+                    <div className="flex items-center justify-between p-2 bg-github-bg rounded">
+                      <span className="text-github-muted">퇴근</span>
+                      <span className="text-orange-400 font-medium">
+                        {formatTime(getTodayLeave()!.timestamp)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
+            {/* 출근/퇴근 버튼 */}
+            <div className="bg-github-card border border-github-border rounded-lg p-6">
+              <h3 className="text-github-text font-medium mb-4">오늘의 출퇴근</h3>
+              <div className="space-y-3">
+                <CommuteButton
+                  type="출근"
+                  onClick={() => handleCommute('출근')}
+                  isLoading={commuteLoading}
+                  hasRecorded={hasCommutedToday()}
+                  recordTime={getTodayCommute() ? formatTime(getTodayCommute()!.timestamp) : undefined}
+                />
+                <CommuteButton
+                  type="퇴근"
+                  onClick={() => handleCommute('퇴근')}
+                  isLoading={commuteLoading}
+                  hasRecorded={hasLeftToday()}
+                  recordTime={getTodayLeave() ? formatTime(getTodayLeave()!.timestamp) : undefined}
+                />
+              </div>
+            </div>
+            {/* 기분 입력 */}
+            <MoodInput
+              onSubmit={handleMoodSubmit}
+              isLoading={isMoodLoading}
+              disabled={commuteLoading}
+            />
           </div>
-
-          {/* 기분 입력 */}
-          <MoodInput
-            onSubmit={handleMoodSubmit}
-            isLoading={isMoodLoading}
-            disabled={commuteLoading}
-          />
-
-          {/* 통계 차트 */}
-          <StatsChart commutes={commutes} moods={moods} myUuid={uuid} />
-
-          {/* 피드 섹션 */}
-          <FeedSection />
+          {/* 우측 메인 컨텐츠 */}
+          <div className="lg:col-span-3 space-y-6">
+            {/* 통계 차트 */}
+            <StatsChart commutes={commutes} moods={moods} myUuid={uuid} />
+            {/* 잔디형 기분분포 */}
+            <MoodHeatmap moods={moods} />
+            {/* 피드 섹션 */}
+            <FeedSection />
+          </div>
         </div>
       </main>
 

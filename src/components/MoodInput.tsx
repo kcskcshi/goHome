@@ -32,39 +32,39 @@ export default function MoodInput({ onSubmit, isLoading = false, disabled = fals
   };
 
   return (
-    <div className="bg-github-card border border-github-border rounded-lg p-6">
-      <h3 className="text-github-text font-medium mb-4">오늘 기분은 어떠세요?</h3>
-      
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="bg-github-card border border-thin border-github-borderLight rounded-md p-4">
+      <h3 className="text-github-text font-medium mb-3 text-sm">오늘 기분은 어떠세요?</h3>
+      <form onSubmit={handleSubmit} className="space-y-3">
         {/* 이모지 선택 */}
         <div>
-          <label className="block text-github-muted text-sm mb-2">기분 선택</label>
-          <div className="grid grid-cols-4 gap-2">
-            {MOOD_EMOJIS.map((mood) => (
-              <button
-                key={mood.emoji}
-                type="button"
-                onClick={() => setSelectedEmoji(mood.emoji)}
-                disabled={disabled}
-                className={`
-                  p-3 rounded-lg text-2xl transition-all duration-200
-                  ${selectedEmoji === mood.emoji
-                    ? 'bg-github-green text-white'
-                    : 'bg-github-bg border border-github-border text-github-text hover:border-github-muted'
-                  }
-                  ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}
-                `}
-                title={mood.label}
-              >
-                {mood.emoji}
-              </button>
-            ))}
+          <label className="block text-github-muted text-xs mb-1">기분 선택</label>
+          <div className="flex justify-center">
+            <div className="grid grid-cols-4 gap-1">
+              {MOOD_EMOJIS.map((mood) => (
+                <button
+                  key={mood.emoji}
+                  type="button"
+                  onClick={() => setSelectedEmoji(mood.emoji)}
+                  disabled={disabled}
+                  className={`
+                    p-1 rounded-md text-base transition-all duration-200
+                    ${selectedEmoji === mood.emoji
+                      ? 'bg-github-green text-white'
+                      : 'bg-github-bg border border-thin border-github-borderLight text-github-text hover:border-github-muted'
+                    }
+                    ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}
+                  `}
+                  title={mood.label}
+                >
+                  {mood.emoji}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-
         {/* 메시지 입력 */}
         <div>
-          <label htmlFor="message" className="block text-github-muted text-sm mb-2">
+          <label htmlFor="message" className="block text-github-muted text-xs mb-1">
             한 줄 메시지
           </label>
           <textarea
@@ -73,23 +73,22 @@ export default function MoodInput({ onSubmit, isLoading = false, disabled = fals
             onChange={(e) => setMessage(e.target.value)}
             disabled={disabled || isLoading}
             placeholder="오늘 기분을 한 줄로 표현해보세요..."
-            className="w-full px-3 py-2 bg-github-bg border border-github-border rounded-md text-github-text placeholder-github-muted resize-none focus:outline-none focus:border-github-green"
-            rows={3}
+            className="w-full px-2 py-1 bg-github-bg border border-thin border-github-borderLight rounded-sm text-github-text placeholder-github-muted resize-none focus:outline-none focus:border-github-green text-sm"
+            rows={2}
             maxLength={100}
           />
           <div className="text-right text-github-muted text-xs mt-1">
             {message.length}/100
           </div>
         </div>
-
         {/* 제출 버튼 */}
         <button
           type="submit"
           disabled={!selectedEmoji || !message.trim() || isLoading || disabled}
           className={`
-            w-full py-3 px-4 rounded-md font-medium transition-all duration-200
+            w-full py-2 px-3 rounded-md font-medium transition-all duration-200 text-sm
             ${selectedEmoji && message.trim() && !isLoading && !disabled
-              ? 'bg-github-green hover:bg-github-green-hover text-white'
+              ? 'bg-github-green hover:bg-github-green/90 text-white'
               : 'bg-github-muted text-github-text cursor-not-allowed opacity-50'
             }
           `}

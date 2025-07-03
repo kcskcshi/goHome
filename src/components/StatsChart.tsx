@@ -2,6 +2,29 @@
 
 import { useState, useEffect } from 'react';
 import { CommuteRecord, MoodData } from '@/types';
+import { Radar, PolarArea } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  RadialLinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Tooltip,
+  Legend,
+  PolarAreaController,
+  ArcElement,
+} from 'chart.js';
+
+ChartJS.register(
+  RadialLinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Tooltip,
+  Legend,
+  PolarAreaController,
+  ArcElement
+);
 
 interface StatsData {
   totalUsers: number;
@@ -109,154 +132,183 @@ export default function StatsChart({ commutes, moods, myUuid }: StatsChartProps)
     });
   }, [commutes, moods, myUuid]);
 
-  const getMaxCount = (data: { count: number }[]) => {
-    return Math.max(...data.map(d => d.count), 1);
-  };
-
   return (
-    <div className="bg-github-card border border-github-border rounded-lg p-6">
-      <h2 className="text-github-text font-medium mb-6">📊 오늘의 통계</h2>
-      {/* 내 출근/퇴근 순위 */}
+    <div className="bg-github-card border border-thin border-github-borderLight rounded-md p-4">
+      <h2 className="text-github-text font-medium mb-4 text-base">📊 오늘의 통계</h2>
       {(stats.myGoRank || stats.myLeaveRank) && (
-        <div className="mb-4 text-center">
+        <div className="mb-3 text-center text-sm">
           <span className="font-bold text-github-green">{stats.myGoRank ? `출근 ${stats.myGoRank}등` : ''}</span>
           {stats.myGoRank && stats.myLeaveRank && <span className="mx-2">|</span>}
           <span className="font-bold text-purple-500">{stats.myLeaveRank ? `퇴근 ${stats.myLeaveRank}등` : ''}</span>
           <span className="ml-2 text-github-muted text-xs">(출근 {stats.goTotal}명, 퇴근 {stats.leaveTotal}명)</span>
         </div>
       )}
-      <div className="space-y-6">
-        {/* 기본 통계 */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-github-green mb-1">
-              {stats.totalUsers}
-            </div>
-            <div className="text-github-muted text-sm">참여자</div>
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="text-center">
+          <div className="text-base font-bold text-github-green mb-1">
+            {stats.totalUsers}
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-500 mb-1">🌅</div>
-            <div className="text-github-muted text-sm">출근왕</div>
-            <div className="text-github-text text-xs mt-1 truncate">
-              {stats.earlyBird}
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-500 mb-1">🌙</div>
-            <div className="text-github-muted text-sm">칼퇴왕</div>
-            <div className="text-github-text text-xs mt-1 truncate">
-              {stats.nightOwl}
-            </div>
+          <div className="text-github-muted text-xs">참여자</div>
+        </div>
+        <div className="text-center">
+          <div className="text-base font-bold text-yellow-500 mb-1">🌅</div>
+          <div className="text-github-muted text-xs">출근왕</div>
+          <div className="text-github-text text-xs mt-1 truncate">
+            {stats.earlyBird}
           </div>
         </div>
-
-        {/* 기분 분포 그래프 */}
-        {stats.moodDistribution.length > 0 && (
-          <div>
-            <h3 className="text-github-text text-sm font-medium mb-3">😊 기분 분포</h3>
-            <div className="space-y-2">
-              {stats.moodDistribution.map((mood: { emoji: string; count: number }) => {
-                const percentage = (mood.count / getMaxCount(stats.moodDistribution)) * 100;
-                return (
-                  <div key={mood.emoji} className="flex items-center space-x-3">
-                    <div className="text-lg w-6">{mood.emoji}</div>
-                    <div className="flex-1">
-                      <div className="bg-github-bg rounded-full h-3 overflow-hidden">
-                        <div 
-                          className="bg-gradient-to-r from-github-green to-green-400 h-full rounded-full transition-all duration-500"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                    <div className="text-github-muted text-xs w-8 text-right">
-                      {mood.count}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        <div className="text-center">
+          <div className="text-base font-bold text-purple-500 mb-1">🌙</div>
+          <div className="text-github-muted text-xs">칼퇴왕</div>
+          <div className="text-github-text text-xs mt-1 truncate">
+            {stats.nightOwl}
           </div>
-        )}
-
-        {/* 출근 시간 분포 */}
-        {stats.commuteTimesGo.length > 0 && (
-          <div>
-            <h3 className="text-github-text text-sm font-medium mb-3">🌅 출근 시간 분포</h3>
-            <div className="flex items-end space-x-1 h-20">
-              {Array.from({ length: 24 }, (_, hour) => {
-                const count = stats.commuteTimesGo.find((t) => t.hour === hour)?.count || 0;
-                const height = count > 0 ? (count / (stats.goTotal || 1)) * 100 : 0;
-                return (
-                  <div key={hour} className="flex-1 flex flex-col items-center">
-                    {count > 0 ? (
-                      <>
-                        <div
-                          className="bg-gradient-to-t from-green-600 to-green-800 rounded-t w-full transition-all duration-500 min-h-[10px] border border-green-900"
-                          style={{ height: `${height}%` }}
-                        />
-                        <div className="text-xs font-bold text-green-200 -mt-5 mb-1 text-center select-none" style={{ zIndex: 1 }}>
-                          {count}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="w-full" style={{ height: 0 }} />
-                    )}
-                    <div className="text-github-muted text-xs mt-1">
-                      {hour.toString().padStart(2, '0')}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* 퇴근 시간 분포 */}
-        {stats.commuteTimesLeave.length > 0 && (
-          <div>
-            <h3 className="text-github-text text-sm font-medium mb-3">🌙 퇴근 시간 분포</h3>
-            <div className="flex items-end space-x-1 h-20">
-              {Array.from({ length: 24 }, (_, hour) => {
-                const count = stats.commuteTimesLeave.find((t) => t.hour === hour)?.count || 0;
-                const height = count > 0 ? (count / (stats.leaveTotal || 1)) * 100 : 0;
-                return (
-                  <div key={hour} className="flex-1 flex flex-col items-center">
-                    {count > 0 ? (
-                      <>
-                        <div
-                          className="bg-gradient-to-t from-red-600 to-red-800 rounded-t w-full transition-all duration-500 min-h-[10px] border border-red-900"
-                          style={{ height: `${height}%` }}
-                        />
-                        <div className="text-xs font-bold text-red-200 -mt-5 mb-1 text-center select-none" style={{ zIndex: 1 }}>
-                          {count}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="w-full" style={{ height: 0 }} />
-                    )}
-                    <div className="text-github-muted text-xs mt-1">
-                      {hour.toString().padStart(2, '0')}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* 빈 상태 */}
-        {stats.totalUsers === 0 && (
-          <div className="text-center py-8">
-            <div className="text-4xl mb-4">📈</div>
-            <div className="text-github-muted">
-              아직 데이터가 없어요.
-            </div>
-            <div className="text-github-muted text-sm mt-2">
-              첫 번째로 출근/퇴근을 기록해보세요!
-            </div>
-          </div>
-        )}
+        </div>
       </div>
+      {/* 기분/출근/퇴근 분포 차트 한 줄 배치 */}
+      <div className="flex flex-col md:flex-row gap-4 justify-center items-stretch mb-2">
+        {/* 기분 분포 (Radar) */}
+        <div className="flex-1 min-w-[180px] bg-github-card border border-thin border-github-borderLight rounded-md flex flex-col items-center p-2">
+          <h3 className="text-github-text text-xs font-medium mb-2 text-center flex items-center">
+            <span className="w-2 h-2 rounded-full bg-green-400 mr-2"></span>
+            기분 분포
+          </h3>
+          {stats.moodDistribution.length > 0 ? (
+            <Radar
+              data={{
+                labels: stats.moodDistribution.map((m) => m.emoji),
+                datasets: [
+                  {
+                    label: '기분 분포',
+                    data: stats.moodDistribution.map((m) => m.count),
+                    backgroundColor: 'rgba(34,197,94,0.2)',
+                    borderColor: 'rgba(34,197,94,1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(34,197,94,1)',
+                    pointBorderColor: '#fff',
+                    pointRadius: 5,
+                  },
+                ],
+              }}
+              options={{
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                  r: {
+                    angleLines: { display: false },
+                    grid: { color: '#333' },
+                    pointLabels: { color: '#fff', font: { size: 12 } },
+                    ticks: { color: '#fff', stepSize: 1, backdropColor: 'transparent' },
+                    min: 0,
+                  },
+                },
+              }}
+              style={{ maxWidth: 160, margin: '0 auto' }}
+            />
+          ) : (
+            <div className="text-github-muted text-center py-4 text-xs">데이터 없음</div>
+          )}
+        </div>
+        {/* 출근 시간 분포 (PolarArea) */}
+        <div className="flex-1 min-w-[180px] bg-github-card border border-thin border-github-borderLight rounded-md flex flex-col items-center p-2">
+          <h3 className="text-github-text text-xs font-medium mb-2 text-center">🌅 출근 시간 분포</h3>
+          <PolarArea
+            data={{
+              labels: Array.from({ length: 24 }, (_, i) => `${i}시`),
+              datasets: [
+                {
+                  label: '출근',
+                  data: Array.from({ length: 24 }, (_, hour) =>
+                    stats.commuteTimesGo.find((t) => t.hour === hour)?.count || 0
+                  ),
+                  backgroundColor: Array.from({ length: 24 }, (_, i) =>
+                    `rgba(34,197,94,${0.3 + 0.7 * (i / 23)})`
+                  ),
+                  borderColor: 'rgba(34,197,94,1)',
+                  borderWidth: 1,
+                },
+              ],
+            }}
+            options={{
+              responsive: true,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: '#161b22',
+                  titleColor: '#c9d1d9',
+                  bodyColor: '#c9d1d9',
+                  borderColor: '#21262d',
+                  borderWidth: 1,
+                },
+              },
+              scales: {
+                r: {
+                  grid: { color: '#333' },
+                  pointLabels: { color: '#c9d1d9', font: { size: 10 } },
+                  ticks: { color: '#8b949e', backdropColor: 'transparent', stepSize: 1 },
+                },
+              },
+            }}
+            style={{ maxWidth: 160, margin: '0 auto' }}
+          />
+        </div>
+        {/* 퇴근 시간 분포 (PolarArea) */}
+        <div className="flex-1 min-w-[180px] bg-github-card border border-thin border-github-borderLight rounded-md flex flex-col items-center p-2">
+          <h3 className="text-github-text text-xs font-medium mb-2 text-center">🌙 퇴근 시간 분포</h3>
+          <PolarArea
+            data={{
+              labels: Array.from({ length: 24 }, (_, i) => `${i}시`),
+              datasets: [
+                {
+                  label: '퇴근',
+                  data: Array.from({ length: 24 }, (_, hour) =>
+                    stats.commuteTimesLeave.find((t) => t.hour === hour)?.count || 0
+                  ),
+                  backgroundColor: Array.from({ length: 24 }, (_, i) =>
+                    `rgba(139,92,246,${0.3 + 0.7 * (i / 23)})`
+                  ),
+                  borderColor: 'rgba(139,92,246,1)',
+                  borderWidth: 1,
+                },
+              ],
+            }}
+            options={{
+              responsive: true,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: '#161b22',
+                  titleColor: '#c9d1d9',
+                  bodyColor: '#c9d1d9',
+                  borderColor: '#21262d',
+                  borderWidth: 1,
+                },
+              },
+              scales: {
+                r: {
+                  grid: { color: '#333' },
+                  pointLabels: { color: '#c9d1d9', font: { size: 10 } },
+                  ticks: { color: '#8b949e', backdropColor: 'transparent', stepSize: 1 },
+                },
+              },
+            }}
+            style={{ maxWidth: 160, margin: '0 auto' }}
+          />
+        </div>
+      </div>
+
+      {/* 빈 상태 */}
+      {stats.totalUsers === 0 && (
+        <div className="text-center py-8">
+          <div className="text-4xl mb-4">📈</div>
+          <div className="text-github-muted">
+            아직 데이터가 없어요.
+          </div>
+          <div className="text-github-muted text-sm mt-2">
+            첫 번째로 출근/퇴근을 기록해보세요!
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
