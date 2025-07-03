@@ -12,6 +12,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.50.2",
     "chart.js": "^4.5.0",
+    "hangul-js": "^0.2.6",
     "next": "15.3.4",
     "react": "^19.0.0",
     "react-calendar-heatmap": "^1.10.0",
