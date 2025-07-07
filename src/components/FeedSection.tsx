@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MoodData, CommuteRecord, GameScoreRecord } from '@/types';
+import { GameScoreRecord } from '@/types';
 import { useSupabase } from '@/hooks/useSupabase';
 import GameScoreRanking from './GameScoreRanking';
 
@@ -12,8 +12,6 @@ export default function FeedSection() {
 
   // 오늘 데이터 필터링
   useEffect(() => {
-    const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
   }, [moods, commutes]);
 
   useEffect(() => {
