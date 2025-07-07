@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import FeedCard from './FeedCard';
 import { MoodData, CommuteRecord, GameScoreRecord } from '@/types';
 import { useSupabase } from '@/hooks/useSupabase';
 import GameScoreRanking from './GameScoreRanking';
@@ -19,16 +18,7 @@ export default function FeedSection() {
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
     const todayEnd = todayStart + 24 * 60 * 60 * 1000;
 
-    const todayMoodsData = moods.filter(mood => 
-      mood.timestamp >= todayStart && mood.timestamp < todayEnd
-    ).sort((a, b) => b.timestamp - a.timestamp);
-
-    const todayCommutesData = commutes.filter(record => 
-      record.timestamp >= todayStart && record.timestamp < todayEnd
-    ).sort((a, b) => b.timestamp - a.timestamp);
-
-    setTodayMoods(todayMoodsData);
-    setTodayRecords(todayCommutesData);
+    // 기존 코드에서 todayMoods, todayRecords는 더 이상 사용되지 않으므로 setState 호출 제거
   }, [moods, commutes]);
 
   useEffect(() => {
@@ -36,13 +26,6 @@ export default function FeedSection() {
       fetchDinoScores().then(setDinoScores);
     }
   }, [activeTab, fetchDinoScores]);
-
-  const formatTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString('ko-KR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
   if (loading) {
     return (
