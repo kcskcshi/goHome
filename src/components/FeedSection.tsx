@@ -5,7 +5,6 @@ import { GameScoreRecord } from '@/types';
 import { useSupabase } from '@/hooks/useSupabase';
 import GameScoreRanking from './GameScoreRanking';
 import FeedCard from './FeedCard';
-import { MoodData, CommuteRecord } from '@/types';
 
 export default function FeedSection() {
   const [activeTab, setActiveTab] = useState<'moods' | 'commutes' | 'commantle' | 'dino'>('moods');
