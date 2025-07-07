@@ -59,6 +59,24 @@ export const useSupabase = () => {
     }
   }
 
+  // 디노 러너 전체 랭킹(고득점자 순, 초기화 없이) 가져오기
+  const fetchDinoScores = async () => {
+    try {
+      const { data, error } = await getSupabase()
+        .from('game_scores')
+        .select('*')
+        .eq('game', 'dino')
+        .order('score', { ascending: false })
+        .order('created_at', { ascending: true })
+        .limit(10);
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('디노 러너 랭킹 가져오기 실패:', error);
+      return [];
+    }
+  };
+
   // 출퇴근 기록 추가
   const addCommute = async (commute: Omit<CommuteRecord, 'id'>) => {
     try {
@@ -89,12 +107,12 @@ export const useSupabase = () => {
     }
   }
 
-  // 꼬맨틀 게임 스코어 추가 (100% 성공 시)
-  const addGameScore = async (score: number, uuid: string, nickname: string) => {
+  // 게임 스코어 추가 (게임 타입별)
+  const addGameScore = async (score: number, uuid: string, nickname: string, game: string = 'commantle') => {
     try {
       const { error } = await getSupabase()
         .from('game_scores')
-        .insert([{ game: 'commantle', score, uuid, nickname }]);
+        .insert([{ game, score, uuid, nickname }]);
       if (error) throw error;
       await fetchGameScores();
     } catch (error) {
@@ -152,6 +170,7 @@ export const useSupabase = () => {
     fetchCommutes,
     fetchMoods,
     fetchGameScores,
-    addGameScore
+    addGameScore,
+    fetchDinoScores
   }
 } 

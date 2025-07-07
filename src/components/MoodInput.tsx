@@ -26,14 +26,13 @@ export default function MoodInput({ onSubmit, isLoading = false, disabled = fals
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEmoji || !message.trim() || isLoading || disabled) return;
-    
     onSubmit(selectedEmoji, message.trim());
     setMessage('');
   };
 
   return (
     <div className="bg-github-card border border-thin border-github-borderLight rounded-md p-4">
-      <h3 className="text-github-text font-medium mb-3 text-sm">오늘 기분은 어떠세요?</h3>
+              <h3 className="text-github-text font-bold mb-3 text-lg">오늘 기분은 어떠세요?</h3>
       <form onSubmit={handleSubmit} className="space-y-3">
         {/* 이모지 선택 */}
         <div>

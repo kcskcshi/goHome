@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
+import { getStoredNickname, generateNickname, setStoredNickname } from '@/utils/nickname';
 
 interface GameState {
   isPlaying: boolean;
@@ -23,6 +24,7 @@ const OBSTACLE_HEIGHT = 40;
 const PTERODACTYL_HEIGHT = 30;
 const GAME_WIDTH = 800;
 const GAME_HEIGHT = 200;
+const DINO_START_X = 50; // 공룡 시작 위치 (좌측 끝)
 
 // 도트 공룡 SVG 컴포넌트
 const DotDino = ({ x, y, size = 32 }: { x: number; y: number; size?: number }) => (
@@ -113,7 +115,6 @@ const DotGround = ({ width, y = 160 }: { width: number; y?: number }) => (
 );
 
 export default function DinoRunnerGame() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | undefined>(undefined);
   const { addGameScore } = useSupabase();
   const [gameState, setGameState] = useState<GameState>({
@@ -127,7 +128,14 @@ export default function DinoRunnerGame() {
     gameSpeed: 5,
     isDucking: false,
   });
-  const [nickname, setNickname] = useState('');
+  const [nickname, setNicknameState] = useState<string>(() => {
+    let n = getStoredNickname();
+    if (!n) {
+      n = generateNickname();
+      setStoredNickname(n);
+    }
+    return n;
+  });
   const [showScoreInput, setShowScoreInput] = useState(false);
   const [pteranodonFrame, setPteranodonFrame] = useState(0);
 
@@ -139,35 +147,30 @@ export default function DinoRunnerGame() {
       // 디노 점프 물리
       let newDinoY = prev.dinoY + prev.dinoVelocity;
       let newDinoVelocity = prev.dinoVelocity + GRAVITY;
-
       if (newDinoY >= GROUND_Y) {
         newDinoY = GROUND_Y;
         newDinoVelocity = 0;
       }
-
       // 장애물 이동
       const newObstacles = prev.obstacles
         .map(obs => ({ ...obs, x: obs.x - prev.gameSpeed }))
         .filter(obs => obs.x > -OBSTACLE_WIDTH);
-
-      // 새 장애물 생성
+      // 새 장애물 생성 (우측에서 등장, y좌표 랜덤)
       if (Math.random() < 0.02) {
         const isPterodactyl = Math.random() < 0.3;
         newObstacles.push({
           x: GAME_WIDTH,
-          y: isPterodactyl ? 50 : GROUND_Y,
+          y: isPterodactyl ? (Math.random() < 0.5 ? 30 : 60) : GROUND_Y, // 익룡은 공중, 운석은 지면
           type: isPterodactyl ? 'pterodactyl' : 'cactus',
         });
       }
-
-      // 충돌 감지
+      // 충돌 감지 (기존 로직 유지)
       const dinoHitbox = {
-        x: 50,
+        x: DINO_START_X, // 공룡을 좌측 끝에 고정
         y: prev.isDucking ? newDinoY + 20 : newDinoY,
         width: DINO_WIDTH,
         height: prev.isDucking ? DINO_HEIGHT / 2 : DINO_HEIGHT,
       };
-
       const collision = newObstacles.some(obs => {
         const obsHitbox = {
           x: obs.x,
@@ -175,7 +178,6 @@ export default function DinoRunnerGame() {
           width: OBSTACLE_WIDTH,
           height: obs.type === 'pterodactyl' ? PTERODACTYL_HEIGHT : OBSTACLE_HEIGHT,
         };
-
         return (
           dinoHitbox.x < obsHitbox.x + obsHitbox.width &&
           dinoHitbox.x + dinoHitbox.width > obsHitbox.x &&
@@ -183,8 +185,11 @@ export default function DinoRunnerGame() {
           dinoHitbox.y + dinoHitbox.height > obsHitbox.y
         );
       });
-
       if (collision) {
+        // 게임 오버 시 최고점이면 자동 저장
+        if (prev.score > prev.highScore) {
+          addGameScore(prev.score, 'temp-uuid', nickname, 'dino');
+        }
         return {
           ...prev,
           isPlaying: false,
@@ -192,16 +197,14 @@ export default function DinoRunnerGame() {
           dinoY: newDinoY,
           dinoVelocity: newDinoVelocity,
           obstacles: newObstacles,
+          highScore: Math.max(prev.highScore, prev.score),
         };
       }
-
       // 점수 증가
       const newScore = prev.score + 1;
       const newHighScore = Math.max(prev.highScore, newScore);
-
       // 속도 증가
       const newGameSpeed = 5 + Math.floor(newScore / 1000);
-
       return {
         ...prev,
         score: newScore,
@@ -212,9 +215,8 @@ export default function DinoRunnerGame() {
         gameSpeed: newGameSpeed,
       };
     });
-
     animationRef.current = requestAnimationFrame(gameLoop);
-  }, [gameState.isPlaying]);
+  }, [gameState.isPlaying, addGameScore, nickname]);
 
   // 게임 시작
   const startGame = () => {
@@ -337,7 +339,7 @@ export default function DinoRunnerGame() {
         {/* 지면 */}
         <DotGround width={GAME_WIDTH} y={GROUND_Y + DINO_HEIGHT} />
         {/* 공룡 */}
-        <DotDino x={50} y={gameState.dinoY + (gameState.isDucking ? 20 : 0)} size={gameState.isDucking ? DINO_HEIGHT / 2 : DINO_HEIGHT} />
+        <DotDino x={DINO_START_X} y={gameState.dinoY + (gameState.isDucking ? 20 : 0)} size={gameState.isDucking ? DINO_HEIGHT / 2 : DINO_HEIGHT} />
         {/* 장애물 */}
         {gameState.obstacles.map((obs, i) =>
           obs.type === 'cactus' ? (
@@ -382,7 +384,7 @@ export default function DinoRunnerGame() {
                 <input
                   type="text"
                   value={nickname}
-                  onChange={e => setNickname(e.target.value)}
+                  onChange={e => setNicknameState(e.target.value)}
                   placeholder="닉네임 입력"
                   className="px-2 py-1 border rounded text-black"
                   style={{ fontFamily: 'monospace', fontSize: 16 }}

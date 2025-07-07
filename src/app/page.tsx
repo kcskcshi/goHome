@@ -39,7 +39,7 @@ export default function Home() {
     uuid
   } = useCommute();
   
-  const { addMood, commutes, moods } = useSupabase();
+  const { addMood, commutes, moods, fetchMoods } = useSupabase();
   const [isMoodLoading, setIsMoodLoading] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [profilePhrase, setProfilePhrase] = useState('');
@@ -80,10 +80,8 @@ export default function Home() {
         timestamp: Date.now(),
         nickname,
       };
-      
       await addMood(moodData);
-      
-      // 성공 메시지 (실제로는 토스트나 알림 사용)
+      await fetchMoods(); // 기분 리스트 즉시 리프레시
       alert('기분이 성공적으로 공유되었습니다!');
     } catch (error) {
       console.error('Mood submission failed:', error);
@@ -107,13 +105,13 @@ export default function Home() {
     <div className="min-h-screen bg-github-bg text-github-text">
       {/* 헤더 */}
       <header className="border-b border-github-border bg-github-card">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="text-2xl">🏠</div>
-              <h1 className="text-xl font-bold">아 집에가고싶다</h1>
+            <div className="flex items-center space-x-4">
+              <div className="text-3xl">🏠</div>
+              <h1 className="text-2xl font-bold text-github-text">아 집에가고싶다</h1>
             </div>
-            <div className="text-github-muted text-sm">
+            <div className="text-github-muted text-base font-medium">
               {nickname}
             </div>
           </div>
@@ -131,10 +129,10 @@ export default function Home() {
                 <img
                   src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(nickname)}`}
                   alt="도트 프로필"
-                  className="w-24 h-24 rounded-full mx-auto mb-4 border border-github-border bg-white"
+                  className="w-28 h-28 rounded-full mx-auto mb-4 border border-github-border bg-white"
                 />
-                <h2 className="text-github-text font-bold text-lg mb-2">{profilePhrase}</h2>
-                <p className="text-github-muted text-sm mb-4">{nickname}</p>
+                <h2 className="text-github-text font-bold text-xl mb-2">{profilePhrase}</h2>
+                <p className="text-github-muted text-base mb-4">{nickname}</p>
                 {/* 오늘 출퇴근 상태 */}
                 <div className="space-y-2 text-sm">
                   {getTodayCommute() && (
@@ -158,7 +156,7 @@ export default function Home() {
             </div>
             {/* 출근/퇴근 버튼 */}
             <div className="bg-github-card border border-github-border rounded-lg p-6">
-              <h3 className="text-github-text font-medium mb-4">오늘의 출퇴근</h3>
+              <h3 className="text-github-text font-bold text-lg mb-4">오늘의 출퇴근</h3>
               <div className="space-y-3">
                 <CommuteButton
                   type="출근"
@@ -189,6 +187,8 @@ export default function Home() {
               isLoading={isMoodLoading}
               disabled={commuteLoading || isPageLoading}
             />
+            {/* 꼬맨틀 게임 순위 - 위치 이동 */}
+            <GameScoreRanking uuid={uuid} />
           </div>
           {/* 우측 메인 컨텐츠 */}
           <div className="lg:col-span-3 space-y-6">
@@ -196,8 +196,6 @@ export default function Home() {
             <StatsChart commutes={commutes} moods={moods} myUuid={uuid} />
             {/* 꼬맨틀 게임 */}
             <CommantleGame uuid={uuid} nickname={nickname} />
-            {/* 꼬맨틀 게임 순위 */}
-            <GameScoreRanking uuid={uuid} />
             {/* 피드 섹션 */}
             <FeedSection />
           </div>

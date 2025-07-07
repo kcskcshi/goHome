@@ -59,6 +59,23 @@ export default function StatsChart({ commutes, moods, myUuid }: StatsChartProps)
     leaveTotal: 0,
   });
 
+  // 더보기 상태 관리
+  const [showAllMoods, setShowAllMoods] = useState(false);
+
+  // 기분 분포 전체 리스트
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const todayEnd = todayStart + 24 * 60 * 60 * 1000;
+  const todayMoods = moods.filter(m => m.timestamp >= todayStart && m.timestamp < todayEnd);
+  const moodCounts: { [key: string]: number } = {};
+  todayMoods.forEach(mood => {
+    moodCounts[mood.emoji] = (moodCounts[mood.emoji] || 0) + 1;
+  });
+  const moodDistributionAll = Object.entries(moodCounts)
+    .map(([emoji, count]) => ({ emoji, count }))
+    .sort((a, b) => b.count - a.count);
+  const moodDistribution = showAllMoods ? moodDistributionAll : moodDistributionAll.slice(0, 5);
+
   useEffect(() => {
     const today = new Date();
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
@@ -86,17 +103,7 @@ export default function StatsChart({ commutes, moods, myUuid }: StatsChartProps)
 
     // 출근왕/칼퇴왕
     const earlyBird = goRecords[0];
-    const nightOwl = leaveRecords[leaveRecords.length - 1];
-
-    // 기분 분포
-    const moodCounts: { [key: string]: number } = {};
-    todayMoods.forEach(mood => {
-      moodCounts[mood.emoji] = (moodCounts[mood.emoji] || 0) + 1;
-    });
-    const moodDistribution = Object.entries(moodCounts)
-      .map(([emoji, count]) => ({ emoji, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
+    const nightOwl = leaveRecords[0];
 
     // 출근 시간 분포
     const hourCountsGo: { [key: number]: number } = {};
@@ -134,7 +141,7 @@ export default function StatsChart({ commutes, moods, myUuid }: StatsChartProps)
 
   return (
     <div className="bg-github-card border border-thin border-github-borderLight rounded-md p-4">
-      <h2 className="text-github-text font-medium mb-4 text-base">📊 오늘의 통계</h2>
+      <h2 className="text-github-text font-bold mb-4 text-lg">📊 오늘의 통계</h2>
       {(stats.myGoRank || stats.myLeaveRank) && (
         <div className="mb-3 text-center text-sm">
           <span className="font-bold text-github-green">{stats.myGoRank ? `출근 ${stats.myGoRank}등` : ''}</span>
@@ -174,37 +181,56 @@ export default function StatsChart({ commutes, moods, myUuid }: StatsChartProps)
             기분 분포
           </h3>
           {stats.moodDistribution.length > 0 ? (
-            <Radar
-              data={{
-                labels: stats.moodDistribution.map((m) => m.emoji),
-                datasets: [
-                  {
-                    label: '기분 분포',
-                    data: stats.moodDistribution.map((m) => m.count),
-                    backgroundColor: 'rgba(34,197,94,0.2)',
-                    borderColor: 'rgba(34,197,94,1)',
-                    borderWidth: 2,
-                    pointBackgroundColor: 'rgba(34,197,94,1)',
-                    pointBorderColor: '#fff',
-                    pointRadius: 5,
+            <>
+              <Radar
+                data={{
+                  labels: stats.moodDistribution.map((m) => m.emoji),
+                  datasets: [
+                    {
+                      label: '기분 분포',
+                      data: stats.moodDistribution.map((m) => m.count),
+                      backgroundColor: 'rgba(34,197,94,0.2)',
+                      borderColor: 'rgba(34,197,94,1)',
+                      borderWidth: 2,
+                      pointBackgroundColor: 'rgba(34,197,94,1)',
+                      pointBorderColor: '#fff',
+                      pointRadius: 5,
+                    },
+                  ],
+                }}
+                options={{
+                  responsive: true,
+                  plugins: { legend: { display: false } },
+                  scales: {
+                    r: {
+                      angleLines: { display: false },
+                      grid: { color: '#333' },
+                      pointLabels: { color: '#fff', font: { size: 12 } },
+                      ticks: { color: '#fff', stepSize: 1, backdropColor: 'transparent' },
+                      min: 0,
+                    },
                   },
-                ],
-              }}
-              options={{
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: {
-                  r: {
-                    angleLines: { display: false },
-                    grid: { color: '#333' },
-                    pointLabels: { color: '#fff', font: { size: 12 } },
-                    ticks: { color: '#fff', stepSize: 1, backdropColor: 'transparent' },
-                    min: 0,
-                  },
-                },
-              }}
-              style={{ maxWidth: 160, margin: '0 auto' }}
-            />
+                }}
+                style={{ maxWidth: 160, margin: '0 auto' }}
+              />
+              {/* 기분 분포 리스트 */}
+              <ul className="flex flex-wrap gap-2 justify-center mt-2">
+                {moodDistribution.map((m, i) => (
+                  <li key={i} className="flex items-center gap-1 text-sm bg-github-bg border border-github-border rounded px-2 py-1">
+                    <span>{m.emoji}</span>
+                    <span className="text-github-muted text-xs">{m.count}명</span>
+                  </li>
+                ))}
+              </ul>
+              {moodDistributionAll.length > 5 && (
+                <button
+                  className="mt-2 text-xs text-github-green underline hover:text-github-green/80"
+                  onClick={() => setShowAllMoods(v => !v)}
+                >
+                  {showAllMoods ? '접기' : '더보기'}
+                </button>
+              )}
+            </>
           ) : (
             <div className="text-github-muted text-center py-4 text-xs">데이터 없음</div>
           )}

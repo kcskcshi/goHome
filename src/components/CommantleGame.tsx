@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Hangul from 'hangul-js';
 import { useSupabase } from '@/hooks/useSupabase';
+import DinoRunnerGame from './DinoRunnerGame';
 
 // 100개 단어 상수 배열
 const COMMANTLE_WORDS = [
@@ -17,9 +18,9 @@ const COMMANTLE_WORDS = [
 ];
 
 function getTodayKeyword(words: string[]): string {
-  // 오늘 날짜(yyyy-mm-dd) 기준 인덱스 계산 (매일 오전 9시 갱신)
+  // 오늘 날짜(yyyy-mm-dd) 기준 인덱스 계산 (매일 자정 00시 갱신)
   const now = new Date();
-  const base = new Date(2024, 0, 1, 9, 0, 0); // 2024-01-01 09:00:00 기준
+  const base = new Date(2024, 0, 1, 0, 0, 0); // 2024-01-01 00:00:00 기준
   const diffDays = Math.floor((now.getTime() - base.getTime()) / (1000 * 60 * 60 * 24));
   const idx = diffDays % words.length;
   return words[idx];
@@ -59,6 +60,7 @@ export default function CommantleGame({ uuid, nickname }: { uuid: string, nickna
   const [feedback, setFeedback] = useState<{score: number, msg: string, emoji: string} | null>(null);
   const [isCorrect, setIsCorrect] = useState(false);
   const { addGameScore } = useSupabase();
+  const [activeTab, setActiveTab] = useState<'commantle' | 'dino'>('commantle');
 
   useEffect(() => {
     // 내장 단어 목록 사용
@@ -98,57 +100,97 @@ export default function CommantleGame({ uuid, nickname }: { uuid: string, nickna
     }
   };
 
+  // Top 5 유사도 높은 메시지 추출
+  const topMessages = [...messages]
+    .filter(m => typeof m.sim === 'number')
+    .sort((a, b) => (b.sim ?? 0) - (a.sim ?? 0))
+    .slice(0, 5);
+
   return (
     <div className="bg-github-card border border-github-border rounded-lg p-4 mt-6">
-      <h3 className="text-github-text font-bold mb-2">꼬맨틀(Commantle) 게임</h3>
-      <div className="text-github-muted text-sm mb-2">
-        오늘의 제시어: <span className="font-bold">{loading ? '(로딩중)' : (keyword ? getChoseong(keyword) : '')}</span>
-      </div>
-      <div className="text-github-muted text-xs mb-3">
-        💡 정확히 100% 일치해야 게임이 완료됩니다!
-      </div>
-      <form onSubmit={handleSubmit} className="flex gap-2 mb-2">
-        <input
-          type="text"
-          className="flex-1 border border-github-border rounded px-2 py-1 bg-github-bg text-github-text"
-          placeholder={isCorrect ? '정답을 맞추셨습니다!' : '한 줄 멘트를 입력하세요'}
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          disabled={loading || isCorrect}
-        />
+      {/* 탭 UI */}
+      <div className="flex mb-4 border-b border-github-border">
         <button
-          type="submit"
-          className="bg-github-green text-white rounded px-4 py-1 font-bold disabled:opacity-60"
-          disabled={loading || !input.trim() || isCorrect}
-        >제출</button>
-      </form>
-      {feedback && (
-        <div className="flex items-center gap-2 mb-2">
-          <div className="text-2xl">{feedback.emoji}</div>
-          <div className="text-github-text font-bold">유사도: {(feedback.score * 100).toFixed(0)}%</div>
-          <div className="text-github-muted text-sm">{feedback.msg}</div>
-          <div className="flex-1 h-2 bg-github-border rounded ml-2">
-            <div
-              className="h-2 rounded bg-github-green"
-              style={{ width: `${Math.round(feedback.score * 100)}%`, transition: 'width 0.7s' }}
-            />
+          className={`px-4 py-2 font-bold text-sm border-b-2 transition-colors duration-150 ${activeTab === 'commantle' ? 'border-green-500 text-green-400' : 'border-transparent text-github-muted hover:text-github-text'}`}
+          onClick={() => setActiveTab('commantle')}
+        >
+          꼬맨틀
+        </button>
+        <button
+          className={`px-4 py-2 font-bold text-sm border-b-2 transition-colors duration-150 ${activeTab === 'dino' ? 'border-green-500 text-green-400' : 'border-transparent text-github-muted hover:text-github-text'}`}
+          onClick={() => setActiveTab('dino')}
+        >
+          디노 러너
+        </button>
+      </div>
+      {activeTab === 'commantle' ? (
+        <>
+          <h3 className="text-github-text font-bold text-lg mb-3">꼬맨틀(Commantle) 게임</h3>
+          <div className="text-github-muted text-base mb-2">
+            오늘의 제시어: <span className="font-bold">{loading ? '(로딩중)' : (keyword ? getChoseong(keyword) : '')}</span>
           </div>
-        </div>
-      )}
-      <div className="text-github-muted text-xs mt-2">오늘의 꼬맨틀</div>
-      <ul className="mt-1 space-y-1">
-        {messages.length === 0 && <li className="text-github-muted text-xs">아직 멘트가 없습니다.</li>}
-        {messages.map((m, i) => (
-          <li key={i} className="bg-github-bg border border-github-border rounded px-2 py-1 text-github-text text-sm">
-            {m.text}
-            {typeof m.sim === 'number' && (
-              <span className="ml-2 text-github-muted text-xs">({(m.sim * 100).toFixed(0)}%)</span>
-            )}
-          </li>
-        ))}
-      </ul>
-      {isCorrect && (
-        <div className="text-github-green font-bold mt-3">🎉 정답을 맞추셨습니다! 오늘은 더 이상 입력할 수 없습니다.</div>
+          <div className="text-github-muted text-sm mb-3">
+            💡 정확히 100% 일치해야 게임이 완료됩니다!
+          </div>
+          <form onSubmit={handleSubmit} className="flex gap-2 mb-2">
+            <input
+              type="text"
+              className="flex-1 border border-github-border rounded px-2 py-1 bg-github-bg text-github-text"
+              placeholder={isCorrect ? '정답을 맞추셨습니다!' : '한 줄 멘트를 입력하세요'}
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              disabled={loading || isCorrect}
+            />
+            <button
+              type="submit"
+              className="bg-github-green text-white rounded px-4 py-1 font-bold disabled:opacity-60"
+              disabled={loading || !input.trim() || isCorrect}
+            >제출</button>
+          </form>
+          {feedback && (
+            <div className="flex items-center gap-2 mb-2">
+              <div className="text-2xl">{feedback.emoji}</div>
+              <div className="text-github-text font-bold">유사도: {(feedback.score * 100).toFixed(0)}%</div>
+              <div className="text-github-muted text-sm">{feedback.msg}</div>
+              <div className="flex-1 h-2 bg-github-border rounded ml-2">
+                <div
+                  className="h-2 rounded bg-github-green"
+                  style={{ width: `${Math.round(feedback.score * 100)}%`, transition: 'width 0.7s' }}
+                />
+              </div>
+            </div>
+          )}
+          <div className="text-github-muted text-xs mt-2">오늘의 꼬맨틀</div>
+          <ul className="mt-1 space-y-1">
+            {topMessages.length === 0 && <li className="text-github-muted text-xs">아직 멘트가 없습니다.</li>}
+            {topMessages.map((m, i) => (
+              <li key={i} className="bg-github-bg border border-github-border rounded px-2 py-1 text-github-text text-sm flex items-center gap-2">
+                <span>{m.text}</span>
+                {typeof m.sim === 'number' && (
+                  <>
+                    <span className="ml-2 text-github-muted text-xs">({(m.sim * 100).toFixed(0)}%)</span>
+                    <div className="flex-1 h-2 bg-github-border rounded ml-2">
+                      <div
+                        className={`h-2 rounded
+                          ${m.sim === 1 ? 'bg-green-700'
+                            : m.sim >= 0.8 ? 'bg-green-500'
+                            : m.sim >= 0.6 ? 'bg-green-300'
+                            : 'bg-gray-500/40'}
+                        `}
+                        style={{ width: `${Math.round((m.sim ?? 0) * 100)}%`, transition: 'width 0.7s' }}
+                      />
+                    </div>
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+          {isCorrect && (
+            <div className="text-github-green font-bold mt-3">🎉 정답을 맞추셨습니다! 오늘은 더 이상 입력할 수 없습니다.</div>
+          )}
+        </>
+      ) : (
+        <DinoRunnerGame />
       )}
     </div>
   );
