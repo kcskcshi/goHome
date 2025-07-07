@@ -6,8 +6,6 @@ import { useSupabase } from '@/hooks/useSupabase';
 import GameScoreRanking from './GameScoreRanking';
 
 export default function FeedSection() {
-  const [todayMoods, setTodayMoods] = useState<MoodData[]>([]);
-  const [todayRecords, setTodayRecords] = useState<CommuteRecord[]>([]);
   const [activeTab, setActiveTab] = useState<'commantle' | 'dino'>('commantle');
   const { moods, commutes, loading, fetchDinoScores } = useSupabase();
   const [dinoScores, setDinoScores] = useState<GameScoreRecord[]>([]);
@@ -16,9 +14,6 @@ export default function FeedSection() {
   useEffect(() => {
     const today = new Date();
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-    const todayEnd = todayStart + 24 * 60 * 60 * 1000;
-
-    // 기존 코드에서 todayMoods, todayRecords는 더 이상 사용되지 않으므로 setState 호출 제거
   }, [moods, commutes]);
 
   useEffect(() => {
