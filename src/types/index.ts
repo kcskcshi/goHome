@@ -34,4 +34,13 @@ export interface DailyStats {
   earlyBird: string;
   nightOwl: string;
   averageMood: string;
+}
+
+export interface GameScoreRecord {
+  id: string;
+  uuid: string;
+  nickname: string;
+  game: string;
+  score: number;
+  created_at: string;
 } 

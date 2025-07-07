@@ -1,5 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import Hangul from 'hangul-js';
+import { useSupabase } from '@/hooks/useSupabase';
+
+// 100개 단어 상수 배열
+const COMMANTLE_WORDS = [
+  '사랑', '행복', '희망', '꿈', '미래', '성공', '도전', '열정', '노력', '인내',
+  '용기', '신뢰', '우정', '가족', '친구', '동료', '선생님', '학생', '직원', '고객',
+  '회사', '학교', '집', '도시', '나라', '세계', '자연', '산', '바다', '하늘',
+  '태양', '달', '별', '구름', '비', '눈', '바람', '꽃', '나무', '풀',
+  '새', '물고기', '강아지', '고양이', '책', '음악', '영화', '게임', '운동', '요리',
+  '여행', '휴식', '일', '공부', '놀이', '웃음', '울음', '화남', '기쁨', '슬픔',
+  '두려움', '놀람', '평온', '흥미', '지루함', '피곤함', '활력', '에너지', '힘', '약함',
+  '큰', '작은', '빠른', '느린', '따뜻한', '차가운', '밝은', '어두운', '부드러운', '거친',
+  '예쁜', '멋진', '좋은', '나쁜', '맛있는', '싫은', '재미있는', '지루한', '어려운', '쉬운',
+  '중요한', '필요한', '불필요한', '특별한', '일반적인', '새로운', '오래된', '현재', '과거', '미래'
+];
 
 function getTodayKeyword(words: string[]): string {
   // 오늘 날짜(yyyy-mm-dd) 기준 인덱스 계산 (매일 오전 9시 갱신)
@@ -8,6 +23,12 @@ function getTodayKeyword(words: string[]): string {
   const diffDays = Math.floor((now.getTime() - base.getTime()) / (1000 * 60 * 60 * 24));
   const idx = diffDays % words.length;
   return words[idx];
+}
+
+// 초성 추출 함수
+function getChoseong(word: string): string {
+  const syllables = Hangul.d(word, true);
+  return syllables.map(syllable => syllable[0]).join('');
 }
 
 const STORAGE_KEY = 'commantle-messages';
@@ -23,29 +44,27 @@ function calcJamoSimilarity(a: string, b: string): number {
 }
 
 function getFeedback(score: number): {msg: string, emoji: string} {
-  if (score >= 0.75) return { msg: '완벽하게 통했습니다!', emoji: '🔥' };
+  if (score >= 1.0) return { msg: '완벽하게 일치합니다!', emoji: '🎉' };
+  if (score >= 0.75) return { msg: '거의 맞췄어요!', emoji: '🔥' };
   if (score >= 0.5) return { msg: '꽤 연관 있어요!', emoji: '😎' };
   if (score >= 0.3) return { msg: '살짝 엇나갔네요', emoji: '🤔' };
   return { msg: '노선이 좀 달라요...', emoji: '🧊' };
 }
 
-export default function CommantleGame() {
+export default function CommantleGame({ uuid, nickname }: { uuid: string, nickname: string }) {
   const [keyword, setKeyword] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{text: string, date: string, sim?: number}[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<{score: number, msg: string, emoji: string} | null>(null);
   const [isCorrect, setIsCorrect] = useState(false);
+  const { addGameScore } = useSupabase();
 
   useEffect(() => {
-    fetch('/commantle_keyword_list.json')
-      .then(res => res.json())
-      .then(data => {
-        if (data.words && Array.isArray(data.words)) {
-          setKeyword(getTodayKeyword(data.words));
-        }
+    // 내장 단어 목록 사용
+    setKeyword(getTodayKeyword(COMMANTLE_WORDS));
         setLoading(false);
-      });
+    
     // 오늘 날짜 기준 메시지 불러오기
     const today = new Date().toISOString().slice(0, 10);
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -58,7 +77,7 @@ export default function CommantleGame() {
     if (correct === today) setIsCorrect(true);
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !keyword) return;
     const today = new Date().toISOString().slice(0, 10);
@@ -70,9 +89,12 @@ export default function CommantleGame() {
     setMessages(next);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     setInput('');
-    if (sim >= 0.75) {
+    // 100% 일치해야만 정답 처리
+    if (sim >= 1.0) {
       setIsCorrect(true);
       localStorage.setItem(CORRECT_KEY, today);
+      // 게임 스코어 기록 (시도 횟수)
+      await addGameScore(next.length, uuid, nickname);
     }
   };
 
@@ -80,7 +102,10 @@ export default function CommantleGame() {
     <div className="bg-github-card border border-github-border rounded-lg p-4 mt-6">
       <h3 className="text-github-text font-bold mb-2">꼬맨틀(Commantle) 게임</h3>
       <div className="text-github-muted text-sm mb-2">
-        오늘의 제시어: <span className="font-bold">{loading ? '(로딩중)' : keyword}</span>
+        오늘의 제시어: <span className="font-bold">{loading ? '(로딩중)' : (keyword ? getChoseong(keyword) : '')}</span>
+      </div>
+      <div className="text-github-muted text-xs mb-3">
+        💡 정확히 100% 일치해야 게임이 완료됩니다!
       </div>
       <form onSubmit={handleSubmit} className="flex gap-2 mb-2">
         <input
@@ -123,7 +148,7 @@ export default function CommantleGame() {
         ))}
       </ul>
       {isCorrect && (
-        <div className="text-github-green font-bold mt-3">정답을 맞추셨습니다! 오늘은 더 이상 입력할 수 없습니다.</div>
+        <div className="text-github-green font-bold mt-3">🎉 정답을 맞추셨습니다! 오늘은 더 이상 입력할 수 없습니다.</div>
       )}
     </div>
   );

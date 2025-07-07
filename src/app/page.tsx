@@ -7,7 +7,25 @@ import StatsChart from '@/components/StatsChart';
 import FeedSection from '@/components/FeedSection';
 import { useCommute } from '@/hooks/useCommute';
 import { useSupabase } from '@/hooks/useSupabase';
-import MoodHeatmap from '@/components/MoodHeatmap';
+import CommantleGame from '@/components/CommantleGame';
+import GameScoreRanking from '@/components/GameScoreRanking';
+
+// 형용사/직업 랜덤 조합
+const ADJECTIVES = [
+  '꽃을 든', '용기가 넘치는', '희망찬', '행복을 전하는', '열정적인', '상상력이 풍부한',
+  '긍정적인', '에너지가 넘치는', '웃음이 가득한', '창의적인', '빛나는', '든든한',
+  '믿음직한', '따뜻한', '섬세한', '도전적인', '성실한', '유쾌한', '친절한', '배려심 깊은'
+];
+const JOBS = [
+  '개발자', '요리사', '디자이너', '분석가', '작가', '음악가', '화가', '선생님', '연구원', '마케터',
+  '기획자', '운동선수', '사진작가', '정원사', '건축가', '의사', '간호사', '파일럿', '탐험가', '예술가'
+];
+
+function getRandomProfile() {
+  const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+  const job = JOBS[Math.floor(Math.random() * JOBS.length)];
+  return `${adj} ${job}`;
+}
 
 export default function Home() {
   const { 
@@ -23,10 +41,26 @@ export default function Home() {
   
   const { addMood, commutes, moods } = useSupabase();
   const [isMoodLoading, setIsMoodLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [profilePhrase, setProfilePhrase] = useState('');
 
   // 다크모드 강제 적용
   useEffect(() => {
     document.documentElement.classList.add('dark');
+  }, []);
+
+  // 페이지 로딩 딜레이 (2-3초)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsPageLoading(false);
+    }, 2500); // 2.5초 딜레이
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // 프로필 문구 랜덤 생성 (새로고침마다)
+  useEffect(() => {
+    setProfilePhrase(getRandomProfile());
   }, []);
 
   const handleCommute = async (type: '출근' | '퇴근') => {
@@ -66,6 +100,9 @@ export default function Home() {
     });
   };
 
+  // 출근 여부에 따른 퇴근 버튼 비활성화
+  const canLeave = hasCommutedToday();
+
   return (
     <div className="min-h-screen bg-github-bg text-github-text">
       {/* 헤더 */}
@@ -91,11 +128,13 @@ export default function Home() {
             {/* 프로필 카드 */}
             <div className="bg-github-card border border-github-border rounded-lg p-6">
               <div className="text-center">
-                <div className="w-24 h-24 bg-github-green rounded-full flex items-center justify-center text-3xl font-bold text-white mx-auto mb-4">
-                  {nickname.charAt(0).toUpperCase()}
-                </div>
-                <h2 className="text-github-text font-bold text-lg mb-2">{nickname}</h2>
-                <p className="text-github-muted text-sm mb-4">개발자 • 데이터 분석가</p>
+                <img
+                  src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(nickname)}`}
+                  alt="도트 프로필"
+                  className="w-24 h-24 rounded-full mx-auto mb-4 border border-github-border bg-white"
+                />
+                <h2 className="text-github-text font-bold text-lg mb-2">{profilePhrase}</h2>
+                <p className="text-github-muted text-sm mb-4">{nickname}</p>
                 {/* 오늘 출퇴근 상태 */}
                 <div className="space-y-2 text-sm">
                   {getTodayCommute() && (
@@ -124,32 +163,41 @@ export default function Home() {
                 <CommuteButton
                   type="출근"
                   onClick={() => handleCommute('출근')}
-                  isLoading={commuteLoading}
+                  isLoading={commuteLoading || isPageLoading}
+                  disabled={isPageLoading}
                   hasRecorded={hasCommutedToday()}
                   recordTime={getTodayCommute() ? formatTime(getTodayCommute()!.timestamp) : undefined}
                 />
                 <CommuteButton
                   type="퇴근"
                   onClick={() => handleCommute('퇴근')}
-                  isLoading={commuteLoading}
+                  isLoading={commuteLoading || isPageLoading}
+                  disabled={isPageLoading || !canLeave}
                   hasRecorded={hasLeftToday()}
                   recordTime={getTodayLeave() ? formatTime(getTodayLeave()!.timestamp) : undefined}
                 />
               </div>
+              {!canLeave && !hasCommutedToday() && !isPageLoading && (
+                <div className="text-github-muted text-xs mt-2 text-center">
+                  💡 출근 후에 퇴근할 수 있습니다
+                </div>
+              )}
             </div>
             {/* 기분 입력 */}
             <MoodInput
               onSubmit={handleMoodSubmit}
               isLoading={isMoodLoading}
-              disabled={commuteLoading}
+              disabled={commuteLoading || isPageLoading}
             />
           </div>
           {/* 우측 메인 컨텐츠 */}
           <div className="lg:col-span-3 space-y-6">
             {/* 통계 차트 */}
             <StatsChart commutes={commutes} moods={moods} myUuid={uuid} />
-            {/* 잔디형 기분분포 */}
-            <MoodHeatmap moods={moods} />
+            {/* 꼬맨틀 게임 */}
+            <CommantleGame uuid={uuid} nickname={nickname} />
+            {/* 꼬맨틀 게임 순위 */}
+            <GameScoreRanking uuid={uuid} />
             {/* 피드 섹션 */}
             <FeedSection />
           </div>

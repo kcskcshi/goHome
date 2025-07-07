@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { getSupabase } from '@/lib/supabase'
-import { CommuteRecord, MoodData } from '@/types'
+import { CommuteRecord, MoodData, GameScoreRecord } from '@/types'
 
 export const useSupabase = () => {
   const [commutes, setCommutes] = useState<CommuteRecord[]>([])
   const [moods, setMoods] = useState<MoodData[]>([])
+  const [gameScores, setGameScores] = useState<GameScoreRecord[]>([])
   const [loading, setLoading] = useState(true)
 
   // 출퇴근 기록 가져오기
@@ -39,6 +40,25 @@ export const useSupabase = () => {
     }
   }
 
+  // 꼬맨틀 게임 스코어 가져오기 (오늘 날짜 기준)
+  const fetchGameScores = async () => {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data, error } = await getSupabase()
+        .from('game_scores')
+        .select('*')
+        .eq('game', 'commantle')
+        .gte('created_at', today + 'T00:00:00+09:00')
+        .lte('created_at', today + 'T23:59:59+09:00')
+        .order('score', { ascending: true })
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      setGameScores(data || []);
+    } catch (error) {
+      console.error('게임 스코어 가져오기 실패:', error);
+    }
+  }
+
   // 출퇴근 기록 추가
   const addCommute = async (commute: Omit<CommuteRecord, 'id'>) => {
     try {
@@ -69,12 +89,26 @@ export const useSupabase = () => {
     }
   }
 
+  // 꼬맨틀 게임 스코어 추가 (100% 성공 시)
+  const addGameScore = async (score: number, uuid: string, nickname: string) => {
+    try {
+      const { error } = await getSupabase()
+        .from('game_scores')
+        .insert([{ game: 'commantle', score, uuid, nickname }]);
+      if (error) throw error;
+      await fetchGameScores();
+    } catch (error) {
+      console.error('게임 스코어 추가 실패:', error);
+      throw error;
+    }
+  }
+
   // 실시간 구독 설정
   useEffect(() => {
     // 초기 데이터 로드
     const loadData = async () => {
       setLoading(true)
-      await Promise.all([fetchCommutes(), fetchMoods()])
+      await Promise.all([fetchCommutes(), fetchMoods(), fetchGameScores()])
       setLoading(false)
     }
     loadData()
@@ -111,10 +145,13 @@ export const useSupabase = () => {
   return {
     commutes,
     moods,
+    gameScores,
     loading,
     addCommute,
     addMood,
     fetchCommutes,
-    fetchMoods
+    fetchMoods,
+    fetchGameScores,
+    addGameScore
   }
 } 
