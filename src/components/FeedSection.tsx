@@ -10,6 +10,7 @@ export default function FeedSection() {
   const [activeTab, setActiveTab] = useState<'moods' | 'commutes' | 'commantle' | 'dino'>('moods');
   const { moods, commutes, loading, fetchDinoScores } = useSupabase();
   const [dinoScores, setDinoScores] = useState<GameScoreRecord[]>([]);
+  const [dinoScoresLoaded, setDinoScoresLoaded] = useState(false);
 
   // 오늘 데이터 필터링
   const today = new Date();
@@ -22,11 +23,15 @@ export default function FeedSection() {
     record.timestamp >= todayStart && record.timestamp < todayEnd
   ).sort((a, b) => b.timestamp - a.timestamp);
 
+  // 디노 러너 순위 데이터를 컴포넌트 마운트 시에만 한 번 가져오기
   useEffect(() => {
-    if (activeTab === 'dino') {
-      fetchDinoScores().then(setDinoScores);
+    if (!dinoScoresLoaded) {
+      fetchDinoScores().then(scores => {
+        setDinoScores(scores);
+        setDinoScoresLoaded(true);
+      });
     }
-  }, [activeTab, fetchDinoScores]);
+  }, [fetchDinoScores, dinoScoresLoaded]);
 
   const formatTime = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString('ko-KR', {
@@ -167,7 +172,12 @@ export default function FeedSection() {
         ) : (
           <div className="space-y-2">
             <div className="text-center font-bold text-lg mb-2">디노 러너 랭킹 TOP 10</div>
-            {dinoScores.length > 0 ? (
+            {!dinoScoresLoaded ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-github-green mx-auto mb-2"></div>
+                <div className="text-github-muted text-sm">랭킹 로딩 중...</div>
+              </div>
+            ) : dinoScores.length > 0 ? (
               <table className="w-full text-sm text-left">
                 <thead>
                   <tr className="border-b border-github-borderLight">
