@@ -121,43 +121,14 @@ export const useSupabase = () => {
     }
   }
 
-  // 실시간 구독 설정
+  // 초기 데이터 로드 (페이지 로드 시에만)
   useEffect(() => {
-    // 초기 데이터 로드
     const loadData = async () => {
       setLoading(true)
       await Promise.all([fetchCommutes(), fetchMoods(), fetchGameScores()])
       setLoading(false)
     }
     loadData()
-
-    // 실시간 구독
-    const supabase = getSupabase();
-    const commutesSubscription = supabase
-      .channel('commutes_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'commutes' },
-        () => {
-          fetchCommutes()
-        }
-      )
-      .subscribe()
-
-    const moodsSubscription = supabase
-      .channel('moods_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'moods' },
-        () => {
-          fetchMoods()
-        }
-      )
-      .subscribe()
-
-    // 클린업
-    return () => {
-      commutesSubscription.unsubscribe()
-      moodsSubscription.unsubscribe()
-    }
   }, [])
 
   return {
