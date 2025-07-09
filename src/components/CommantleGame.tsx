@@ -65,8 +65,8 @@ export default function CommantleGame({ uuid, nickname }: { uuid: string, nickna
   useEffect(() => {
     // 내장 단어 목록 사용
     setKeyword(getTodayKeyword(COMMANTLE_WORDS));
-        setLoading(false);
-    
+    setLoading(false);
+
     // 오늘 날짜 기준 메시지 불러오기
     const today = new Date().toISOString().slice(0, 10);
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -74,9 +74,14 @@ export default function CommantleGame({ uuid, nickname }: { uuid: string, nickna
       const arr: {text: string, date: string, sim?: number}[] = JSON.parse(saved);
       setMessages(arr.filter((m) => m.date === today));
     }
-    // 정답 여부 확인
+    // 정답 여부 확인 (날짜 다르면 초기화)
     const correct = localStorage.getItem(CORRECT_KEY);
-    if (correct === today) setIsCorrect(true);
+    if (correct === today) {
+      setIsCorrect(true);
+    } else {
+      setIsCorrect(false);
+      if (correct) localStorage.removeItem(CORRECT_KEY);
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -95,8 +100,8 @@ export default function CommantleGame({ uuid, nickname }: { uuid: string, nickna
     if (sim >= 1.0) {
       setIsCorrect(true);
       localStorage.setItem(CORRECT_KEY, today);
-      // 게임 스코어 기록 (시도 횟수)
-      await addGameScore(next.length, uuid, nickname);
+      // 100% 일치 시, 시도 횟수 기록
+      await addGameScore(next.length, uuid, nickname, 'commantle');
     }
   };
 
@@ -190,7 +195,7 @@ export default function CommantleGame({ uuid, nickname }: { uuid: string, nickna
           )}
         </>
       ) : (
-        <DinoRunnerGame />
+        <DinoRunnerGame uuid={uuid} nickname={nickname} />
       )}
     </div>
   );

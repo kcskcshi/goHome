@@ -1,12 +1,28 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useContext, createContext, ReactNode } from 'react'
 import { getSupabase } from '@/lib/supabase'
 import { CommuteRecord, MoodData, GameScoreRecord } from '@/types'
 
-export const useSupabase = () => {
-  const [commutes, setCommutes] = useState<CommuteRecord[]>([])
-  const [moods, setMoods] = useState<MoodData[]>([])
-  const [gameScores, setGameScores] = useState<GameScoreRecord[]>([])
-  const [loading, setLoading] = useState(true)
+interface SupabaseContextType {
+  commutes: CommuteRecord[];
+  moods: MoodData[];
+  gameScores: GameScoreRecord[];
+  loading: boolean;
+  addCommute: (commute: Omit<CommuteRecord, 'id'>) => Promise<void>;
+  addMood: (mood: Omit<MoodData, 'id'>) => Promise<void>;
+  fetchCommutes: () => Promise<void>;
+  fetchMoods: () => Promise<void>;
+  fetchGameScores: () => Promise<void>;
+  addGameScore: (score: number, uuid: string, nickname: string, game?: string) => Promise<void>;
+  fetchDinoScores: () => Promise<GameScoreRecord[]>;
+}
+
+const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
+
+export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
+  const [commutes, setCommutes] = useState<CommuteRecord[]>([]);
+  const [moods, setMoods] = useState<MoodData[]>([]);
+  const [gameScores, setGameScores] = useState<GameScoreRecord[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // 출퇴근 기록 가져오기
   const fetchCommutes = async () => {
@@ -108,11 +124,12 @@ export const useSupabase = () => {
   }
 
   // 게임 스코어 추가 (게임 타입별)
-  const addGameScore = async (score: number, uuid: string, nickname: string, game: string = 'commantle') => {
+  const addGameScore = async (score: number, id: string, nickname: string, game: string = 'commantle') => {
     try {
+      // id는 uuid 타입이어야 함
       const { error } = await getSupabase()
         .from('game_scores')
-        .insert([{ game, score, uuid, nickname }]);
+        .insert([{ id, nickname, game, score }]);
       if (error) throw error;
       await fetchGameScores();
     } catch (error) {
@@ -124,24 +141,39 @@ export const useSupabase = () => {
   // 초기 데이터 로드 (페이지 로드 시에만)
   useEffect(() => {
     const loadData = async () => {
-      setLoading(true)
-      await Promise.all([fetchCommutes(), fetchMoods(), fetchGameScores()])
-      setLoading(false)
-    }
-    loadData()
-  }, [])
+      setLoading(true);
+      await Promise.all([fetchCommutes(), fetchMoods(), fetchGameScores()]);
+      setLoading(false);
+    };
+    loadData();
+  }, []);
 
-  return {
-    commutes,
-    moods,
-    gameScores,
-    loading,
-    addCommute,
-    addMood,
-    fetchCommutes,
-    fetchMoods,
-    fetchGameScores,
-    addGameScore,
-    fetchDinoScores
-  }
-} 
+  return React.createElement(
+    SupabaseContext.Provider,
+    {
+      value: {
+        commutes,
+        moods,
+        gameScores,
+        loading,
+        addCommute,
+        addMood,
+        fetchCommutes,
+        fetchMoods,
+        fetchGameScores,
+        addGameScore,
+        fetchDinoScores
+      }
+    },
+    children
+  );
+};
+
+export const useSupabaseContext = () => {
+  const ctx = useContext(SupabaseContext);
+  if (!ctx) throw new Error('useSupabaseContext must be used within a SupabaseProvider');
+  return ctx;
+};
+
+// 기존 useSupabase 훅은 deprecated, 하위 호환 위해 Context만 반환
+export const useSupabase = useSupabaseContext; 

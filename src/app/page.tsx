@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import CommuteButton from '@/components/CommuteButton';
 import MoodInput from '@/components/MoodInput';
 import StatsChart from '@/components/StatsChart';
 import FeedSection from '@/components/FeedSection';
 import { useCommute } from '@/hooks/useCommute';
-import { useSupabase } from '@/hooks/useSupabase';
+import { SupabaseProvider, useSupabase } from '@/hooks/useSupabase';
 import CommantleGame from '@/components/CommantleGame';
-import GameScoreRanking from '@/components/GameScoreRanking';
+import Image from 'next/image';
 
 // 형용사/직업 랜덤 조합
 const ADJECTIVES = [
@@ -27,7 +27,11 @@ function getRandomProfile() {
   return `${adj} ${job}`;
 }
 
-export default function Home() {
+type FeedSectionRefType = {
+  setActiveTab: (tab: string) => void;
+};
+
+function HomeContent() {
   const { 
     nickname, 
     isLoading: commuteLoading, 
@@ -43,6 +47,7 @@ export default function Home() {
   const [isMoodLoading, setIsMoodLoading] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [profilePhrase, setProfilePhrase] = useState('');
+  const feedSectionRef = useRef<FeedSectionRefType | null>(null);
 
   // 다크모드 강제 적용
   useEffect(() => {
@@ -82,10 +87,14 @@ export default function Home() {
       };
       await addMood(moodData);
       await fetchMoods(); // 기분 리스트 즉시 리프레시
-      alert('기분이 성공적으로 공유되었습니다!');
+      // alert('기분이 성공적으로 공유되었습니다!'); // 팝업 제거
+      // FeedSection의 탭을 '기분'으로 전환 (ref 사용)
+      if (feedSectionRef.current && typeof feedSectionRef.current.setActiveTab === 'function') {
+        feedSectionRef.current.setActiveTab('moods');
+      }
     } catch (error) {
       console.error('Mood submission failed:', error);
-      alert('기분 공유에 실패했습니다. 다시 시도해주세요.');
+      // alert('기분 공유에 실패했습니다. 다시 시도해주세요.'); // 팝업 제거
     } finally {
       setIsMoodLoading(false);
     }
@@ -126,10 +135,13 @@ export default function Home() {
             {/* 프로필 카드 */}
             <div className="bg-github-card border border-github-border rounded-lg p-6">
               <div className="text-center">
-                <img
+                <Image
                   src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(nickname)}`}
                   alt="도트 프로필"
+                  width={112}
+                  height={112}
                   className="w-28 h-28 rounded-full mx-auto mb-4 border border-github-border bg-white"
+                  priority
                 />
                 <h2 className="text-github-text font-bold text-xl mb-2">{profilePhrase}</h2>
                 <p className="text-github-muted text-base mb-4">{nickname}</p>
@@ -187,8 +199,6 @@ export default function Home() {
               isLoading={isMoodLoading}
               disabled={commuteLoading || isPageLoading}
             />
-            {/* 꼬맨틀 게임 순위 - 위치 이동 */}
-            <GameScoreRanking uuid={uuid} />
           </div>
           {/* 우측 메인 컨텐츠 */}
           <div className="lg:col-span-3 space-y-6">
@@ -197,7 +207,7 @@ export default function Home() {
             {/* 꼬맨틀 게임 */}
             <CommantleGame uuid={uuid} nickname={nickname} />
             {/* 피드 섹션 */}
-            <FeedSection />
+            <FeedSection ref={feedSectionRef} uuid={uuid} />
           </div>
         </div>
       </main>
@@ -212,5 +222,13 @@ export default function Home() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <SupabaseProvider>
+      <HomeContent />
+    </SupabaseProvider>
   );
 }

@@ -1,16 +1,16 @@
 import type { NextConfig } from "next";
 
+const isProd = process.env.NODE_ENV === 'production';
+const repoName = 'goHome'; // 실제 레포명
+
 const nextConfig: NextConfig = {
   output: 'export',
   trailingSlash: true,
   images: {
     unoptimized: true,
   },
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/goHome/' : '',
-  basePath: process.env.NODE_ENV === 'production' ? '/goHome' : '',
-  experimental: {
-    esmExternals: false,
-  },
+  basePath: isProd ? `/${repoName}` : '',
+  assetPrefix: isProd ? `/${repoName}/` : '',
 };
 
 export default nextConfig;

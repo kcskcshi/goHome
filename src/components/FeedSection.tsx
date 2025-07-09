@@ -1,13 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { GameScoreRecord } from '@/types';
 import { useSupabase } from '@/hooks/useSupabase';
-import GameScoreRanking from './GameScoreRanking';
 import FeedCard from './FeedCard';
+import GameScoreRanking from './GameScoreRanking';
 
-export default function FeedSection() {
+interface FeedSectionProps {
+  uuid: string;
+}
+const FeedSection = forwardRef(({ uuid }: FeedSectionProps, ref) => {
   const [activeTab, setActiveTab] = useState<'moods' | 'commutes' | 'commantle' | 'dino'>('moods');
+  useImperativeHandle(ref, () => ({
+    setActiveTab,
+  }));
   const { moods, commutes, loading, fetchDinoScores } = useSupabase();
   const [dinoScores, setDinoScores] = useState<GameScoreRecord[]>([]);
   const [dinoScoresLoaded, setDinoScoresLoaded] = useState(false);
@@ -168,7 +174,7 @@ export default function FeedSection() {
             )}
           </div>
         ) : activeTab === 'commantle' ? (
-          <GameScoreRanking uuid={''} />
+          <GameScoreRanking uuid={uuid} />
         ) : (
           <div className="space-y-2">
             <div className="text-center font-bold text-lg mb-2">디노 러너 랭킹 TOP 10</div>
@@ -189,8 +195,18 @@ export default function FeedSection() {
                 </thead>
                 <tbody>
                   {dinoScores.map((score, idx) => (
-                    <tr key={score.id} className="border-b border-github-borderLight">
-                      <td className="py-1">{idx + 1}</td>
+                    <tr
+                      key={score.id}
+                      className={`border-b border-github-borderLight ${
+                        idx === 0 ? 'bg-yellow-300/30' : idx === 1 ? 'bg-gray-300/30' : idx === 2 ? 'bg-orange-400/20' : ''
+                      }`}
+                    >
+                      <td className="py-1 font-bold flex items-center gap-1">
+                        {idx === 0 && <span className="text-yellow-400">🥇</span>}
+                        {idx === 1 && <span className="text-gray-300">🥈</span>}
+                        {idx === 2 && <span className="text-orange-400">🥉</span>}
+                        {idx + 1}
+                      </td>
                       <td className="py-1">{score.nickname}</td>
                       <td className="py-1">{score.score}</td>
                       <td className="py-1">{score.created_at.slice(0, 10)}</td>
@@ -211,4 +227,6 @@ export default function FeedSection() {
       </div>
     </div>
   );
-} 
+});
+FeedSection.displayName = 'FeedSection';
+export default FeedSection; 

@@ -137,7 +137,7 @@ export default function StatsChart({ commutes, moods, myUuid }: StatsChartProps)
       goTotal: goRecords.length,
       leaveTotal: leaveRecords.length,
     });
-  }, [commutes, moods, myUuid]);
+  }, [commutes, moods, myUuid, moodDistribution]);
 
   return (
     <div className="bg-github-card border border-thin border-github-borderLight rounded-md p-4">

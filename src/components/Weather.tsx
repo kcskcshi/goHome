@@ -1,7 +1,7 @@
 'use client';
 
 import { WeatherInfo } from '@/types';
-import { getWeatherIcon } from '@/utils/weather';
+import Image from 'next/image';
 
 interface WeatherProps {
   weather: WeatherInfo | null;
@@ -67,10 +67,13 @@ export default function Weather({ weather, isLoading, error, onRefresh }: Weathe
     <div className="bg-github-card border border-github-border rounded-lg p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <img
-            src={getWeatherIcon(weather.icon)}
+          <Image
+            src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
             alt={weather.description}
-            className="w-12 h-12"
+            width={48}
+            height={48}
+            className="w-12 h-12 inline-block align-middle"
+            priority
           />
           <div>
             <div className="text-github-text font-medium">

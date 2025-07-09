@@ -1,413 +1,285 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from "react";
 import { useSupabase } from '@/hooks/useSupabase';
-import { getStoredNickname, generateNickname, setStoredNickname } from '@/utils/nickname';
 
-interface GameState {
-  isPlaying: boolean;
-  isGameOver: boolean;
-  score: number;
-  highScore: number;
-  dinoY: number;
-  dinoVelocity: number;
-  obstacles: Array<{ x: number; y: number; type: 'cactus' | 'pterodactyl' }>;
-  gameSpeed: number;
-  isDucking: boolean;
-}
-
-const GRAVITY = 0.8;
-const JUMP_FORCE = -15;
-const GROUND_Y = 0;
+const CANVAS_WIDTH = 800;
+const CANVAS_HEIGHT = 200;
+const GROUND_Y = 150;
 const DINO_WIDTH = 40;
 const DINO_HEIGHT = 40;
-const OBSTACLE_WIDTH = 30;
-const OBSTACLE_HEIGHT = 40;
-const PTERODACTYL_HEIGHT = 30;
-const GAME_WIDTH = 800;
-const GAME_HEIGHT = 200;
-const DINO_START_X = 50; // 공룡 시작 위치 (좌측 끝)
+const GRAVITY = 0.6;
+const JUMP_VELOCITY = -9; // 점프 높이 낮춤
+const OBSTACLE_WIDTH = 14; // 장애물 너비 축소
+const OBSTACLE_HEIGHT = 28; // 장애물 높이 축소
 
-// 도트 공룡 SVG 컴포넌트
-const DotDino = ({ x, y, size = 32 }: { x: number; y: number; size?: number }) => (
-  <svg
-    x={x}
-    y={y}
-    width={size}
-    height={size}
-    viewBox="0 0 16 16"
-    style={{ position: 'absolute', imageRendering: 'pixelated' }}
-  >
-    {/* 몸통 */}
-    <rect x="2" y="7" width="8" height="5" fill="#6ee7b7" />
-    {/* 다리 */}
-    <rect x="3" y="12" width="2" height="2" fill="#6ee7b7" />
-    <rect x="7" y="12" width="2" height="2" fill="#6ee7b7" />
-    {/* 꼬리 */}
-    <rect x="0" y="9" width="2" height="2" fill="#34d399" />
-    {/* 머리 */}
-    <rect x="9" y="5" width="4" height="3" fill="#6ee7b7" />
-    {/* 눈 */}
-    <rect x="12" y="6" width="1" height="1" fill="#222" />
-  </svg>
-);
+function drawDotDino(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  // 몸통
+  ctx.fillStyle = "#6ee7b7";
+  ctx.fillRect(x + 8, y + 20, 24, 14);
+  // 다리
+  ctx.fillRect(x + 12, y + 34, 6, 6);
+  ctx.fillRect(x + 22, y + 34, 6, 6);
+  // 꼬리
+  ctx.fillStyle = "#34d399";
+  ctx.fillRect(x, y + 26, 8, 8);
+  // 머리
+  ctx.fillStyle = "#6ee7b7";
+  ctx.fillRect(x + 28, y + 10, 10, 10);
+  // 눈
+  ctx.fillStyle = "#222";
+  ctx.fillRect(x + 36, y + 14, 2, 2);
+}
 
-// 도트 운석 SVG 컴포넌트
-const DotMeteor = ({ x, y, size = 16 }: { x: number; y: number; size?: number }) => (
-  <svg
-    x={x}
-    y={y}
-    width={size}
-    height={size}
-    viewBox="0 0 12 12"
-    style={{ position: 'absolute', imageRendering: 'pixelated' }}
-  >
-    {/* 운석 본체 */}
-    <rect x="3" y="3" width="6" height="6" fill="#f87171" />
-    {/* 불꽃 꼬리 */}
-    <rect x="2" y="7" width="2" height="2" fill="#fbbf24" />
-    <rect x="1" y="9" width="1" height="1" fill="#f59e42" />
-  </svg>
-);
+type Obstacle = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
 
-// 도트 익룡 SVG 컴포넌트 (2프레임)
-const DotPteranodon = ({ x, y, size = 20, frame = 0 }: { x: number; y: number; size?: number; frame?: number }) => (
-  <svg
-    x={x}
-    y={y}
-    width={size}
-    height={size}
-    viewBox="0 0 20 12"
-    style={{ position: 'absolute', imageRendering: 'pixelated' }}
-  >
-    {/* 몸통 */}
-    <rect x="8" y="5" width="4" height="2" fill="#a3a3a3" />
-    {/* 머리 */}
-    <rect x="12" y="5" width="2" height="1" fill="#a3a3a3" />
-    {/* 날개 프레임 */}
-    {frame === 0 ? (
-      <>
-        <rect x="4" y="7" width="6" height="1" fill="#a3a3a3" />
-        <rect x="2" y="8" width="2" height="1" fill="#a3a3a3" />
-      </>
-    ) : (
-      <>
-        <rect x="4" y="4" width="6" height="1" fill="#a3a3a3" />
-        <rect x="2" y="3" width="2" height="1" fill="#a3a3a3" />
-      </>
-    )}
-  </svg>
-);
+export default function DinoRunnerGame({ uuid, nickname }: { uuid: string, nickname: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [score, setScore] = useState(0);
+  const [isGameOver, setIsGameOver] = useState(false);
+  const { addGameScore, fetchDinoScores } = useSupabase();
+  const [saveMsg, setSaveMsg] = useState('');
+  const [hasSaved, setHasSaved] = useState(false);
 
-// 도트 지면 SVG 컴포넌트 (반복 패턴)
-const DotGround = ({ width, y = 160 }: { width: number; y?: number }) => (
-  <svg
-    x={0}
-    y={y}
-    width={width}
-    height={16}
-    viewBox={`0 0 ${width} 16`}
-    style={{ position: 'absolute', imageRendering: 'pixelated' }}
-  >
-    {/* 반복되는 도트 패턴 */}
-    {Array.from({ length: Math.ceil(width / 8) }).map((_, i) => (
-      <rect key={i} x={i * 8} y={8 + (i % 2) * 2} width={8} height={4} fill="#a16207" />
-    ))}
-  </svg>
-);
-
-export default function DinoRunnerGame() {
-  const animationRef = useRef<number | undefined>(undefined);
-  const { addGameScore } = useSupabase();
-  const [gameState, setGameState] = useState<GameState>({
-    isPlaying: false,
-    isGameOver: false,
-    score: 0,
-    highScore: parseInt(localStorage.getItem('dino-high-score') || '0'),
-    dinoY: GROUND_Y,
-    dinoVelocity: 0,
-    obstacles: [],
-    gameSpeed: 5,
-    isDucking: false,
+  const dino = useRef({
+    x: 50,
+    y: GROUND_Y - DINO_HEIGHT,
+    vy: 0,
+    isJumping: false,
   });
-  const [nickname, setNicknameState] = useState<string>(() => {
-    let n = getStoredNickname();
-    if (!n) {
-      n = generateNickname();
-      setStoredNickname(n);
+
+  const jumpCount = useRef(0); // 2단 점프용
+  const obstacles = useRef<Obstacle[]>([]);
+  const speed = useRef(6);
+  const animationRef = useRef(0);
+
+  const resetGame = () => {
+    dino.current = {
+      x: 50,
+      y: GROUND_Y - DINO_HEIGHT,
+      vy: 0,
+      isJumping: false,
+    };
+    jumpCount.current = 0; // 점프 카운트 초기화
+    obstacles.current = [];
+    setScore(0);
+    speed.current = 6;
+    setIsGameOver(false); // isGameOver가 false로 바뀌면 useEffect에서 gameLoop 시작
+    // animationRef.current = requestAnimationFrame(gameLoop); // 이 부분 제거
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // 👉 일반 점프 (2단 점프)
+    if ((e.code === "Space" || e.code === "ArrowUp")) {
+      e.preventDefault();
+      if (jumpCount.current < 2) {
+        dino.current.vy = JUMP_VELOCITY;
+        dino.current.isJumping = true;
+        jumpCount.current += 1;
+      }
     }
-    return n;
-  });
-  const [showScoreInput, setShowScoreInput] = useState(false);
-  const [pteranodonFrame, setPteranodonFrame] = useState(0);
-
-  // 게임 루프
-  const gameLoop = useCallback(() => {
-    if (!gameState.isPlaying) return;
-
-    setGameState(prev => {
-      // 디노 점프 물리
-      let newDinoY = prev.dinoY + prev.dinoVelocity;
-      let newDinoVelocity = prev.dinoVelocity + GRAVITY;
-      if (newDinoY >= GROUND_Y) {
-        newDinoY = GROUND_Y;
-        newDinoVelocity = 0;
-      }
-      // 장애물 이동
-      const newObstacles = prev.obstacles
-        .map(obs => ({ ...obs, x: obs.x - prev.gameSpeed }))
-        .filter(obs => obs.x > -OBSTACLE_WIDTH);
-      // 새 장애물 생성 (우측에서 등장, y좌표 랜덤)
-      if (Math.random() < 0.02) {
-        const isPterodactyl = Math.random() < 0.3;
-        newObstacles.push({
-          x: GAME_WIDTH,
-          y: isPterodactyl ? (Math.random() < 0.5 ? 30 : 60) : GROUND_Y, // 익룡은 공중, 운석은 지면
-          type: isPterodactyl ? 'pterodactyl' : 'cactus',
-        });
-      }
-      // 충돌 감지 (기존 로직 유지)
-      const dinoHitbox = {
-        x: DINO_START_X, // 공룡을 좌측 끝에 고정
-        y: prev.isDucking ? newDinoY + 20 : newDinoY,
-        width: DINO_WIDTH,
-        height: prev.isDucking ? DINO_HEIGHT / 2 : DINO_HEIGHT,
-      };
-      const collision = newObstacles.some(obs => {
-        const obsHitbox = {
-          x: obs.x,
-          y: obs.y,
-          width: OBSTACLE_WIDTH,
-          height: obs.type === 'pterodactyl' ? PTERODACTYL_HEIGHT : OBSTACLE_HEIGHT,
-        };
-        return (
-          dinoHitbox.x < obsHitbox.x + obsHitbox.width &&
-          dinoHitbox.x + dinoHitbox.width > obsHitbox.x &&
-          dinoHitbox.y < obsHitbox.y + obsHitbox.height &&
-          dinoHitbox.y + dinoHitbox.height > obsHitbox.y
-        );
-      });
-      if (collision) {
-        // 게임 오버 시 최고점이면 자동 저장
-        if (prev.score > prev.highScore) {
-          addGameScore(prev.score, 'temp-uuid', nickname, 'dino');
-        }
-        return {
-          ...prev,
-          isPlaying: false,
-          isGameOver: true,
-          dinoY: newDinoY,
-          dinoVelocity: newDinoVelocity,
-          obstacles: newObstacles,
-          highScore: Math.max(prev.highScore, prev.score),
-        };
-      }
-      // 점수 증가
-      const newScore = prev.score + 1;
-      const newHighScore = Math.max(prev.highScore, newScore);
-      // 속도 증가
-      const newGameSpeed = 5 + Math.floor(newScore / 1000);
-      return {
-        ...prev,
-        score: newScore,
-        highScore: newHighScore,
-        dinoY: newDinoY,
-        dinoVelocity: newDinoVelocity,
-        obstacles: newObstacles,
-        gameSpeed: newGameSpeed,
-      };
-    });
-    animationRef.current = requestAnimationFrame(gameLoop);
-  }, [gameState.isPlaying, addGameScore, nickname]);
-
-  // 게임 시작
-  const startGame = () => {
-    setGameState(prev => ({
-      ...prev,
-      isPlaying: true,
-      isGameOver: false,
-      score: 0,
-      dinoY: GROUND_Y,
-      dinoVelocity: 0,
-      obstacles: [],
-      gameSpeed: 5,
-      isDucking: false,
-    }));
   };
 
-  // 점프
-  const jump = () => {
-    if (!gameState.isPlaying || gameState.dinoY !== GROUND_Y) return;
-    setGameState(prev => ({
-      ...prev,
-      dinoVelocity: JUMP_FORCE,
-    }));
+  // 모바일 터치 점프 핸들러
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    if (jumpCount.current < 2) {
+      dino.current.vy = JUMP_VELOCITY;
+      dino.current.isJumping = true;
+      jumpCount.current += 1;
+    }
   };
 
-  // 숙이기
-  const duck = (isDucking: boolean) => {
-    if (!gameState.isPlaying) return;
-    setGameState(prev => ({
-      ...prev,
-      isDucking,
-    }));
-  };
-
-  // 키보드 이벤트
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' || e.code === 'ArrowUp') {
-        e.preventDefault();
-        jump();
-      } else if (e.code === 'ArrowDown') {
-        e.preventDefault();
-        duck(true);
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'ArrowDown') {
-        e.preventDefault();
-        duck(false);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [gameState.isPlaying]);
-
-  // 게임 루프 시작/정지
-  useEffect(() => {
-    if (gameState.isPlaying) {
+    document.addEventListener("keydown", handleKeyDown);
+    // useEffect에서 최초 1회만 gameLoop를 시작하는 구조 →
+    // isGameOver가 false로 바뀔 때마다 gameLoop를 시작하도록 개선
+    if (!isGameOver) {
       animationRef.current = requestAnimationFrame(gameLoop);
-    } else {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
     }
-
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+      cancelAnimationFrame(animationRef.current);
+      document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [gameState.isPlaying, gameLoop]);
+    // eslint-disable-next-line
+  }, [isGameOver]);
 
-  // 하이스코어 저장
   useEffect(() => {
-    if (gameState.highScore > 0) {
-      localStorage.setItem('dino-high-score', gameState.highScore.toString());
+    if (isGameOver && !hasSaved && uuid && nickname) {
+      (async () => {
+        try {
+          const scores = await fetchDinoScores();
+          const myScore = scores.find(s => s.uuid === uuid);
+          if (!myScore || score > myScore.score) {
+            await addGameScore(score, uuid, nickname, 'dino');
+            setSaveMsg('신기록! 랭킹에 반영됩니다.');
+          } else {
+            setSaveMsg('기존 최고점 미달, 저장되지 않습니다.');
+          }
+          setHasSaved(true);
+        } catch {
+          setSaveMsg('저장 실패! 다시 시도해 주세요.');
+          setHasSaved(true);
+        }
+      })();
     }
-  }, [gameState.highScore]);
-
-  // 익룡 프레임 애니메이션
-  useEffect(() => {
-    if (!gameState.isPlaying) return;
-    const interval = setInterval(() => {
-      setPteranodonFrame(f => (f + 1) % 2);
-    }, 200);
-    return () => clearInterval(interval);
-  }, [gameState.isPlaying]);
-
-  // 점수 저장
-  const saveScore = async () => {
-    if (!nickname.trim()) return;
-    
-    try {
-      await addGameScore(gameState.score, 'temp-uuid', nickname, 'dino');
-      setShowScoreInput(false);
-      alert('점수가 저장되었습니다!');
-    } catch (error) {
-      console.error('Score save failed:', error);
-      alert('점수 저장에 실패했습니다.');
+    if (!isGameOver) {
+      setHasSaved(false);
+      setSaveMsg('');
     }
+    // eslint-disable-next-line
+  }, [isGameOver, uuid, nickname]);
+
+  const gameLoop = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!ctx || isGameOver) return;
+
+    // 배경색 채우기 (회색톤)
+    ctx.fillStyle = "#2d333b";
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    // draw ground
+    ctx.fillStyle = "#444c56";
+    ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, 2);
+
+    // update dino
+    dino.current.vy += GRAVITY;
+    dino.current.y += dino.current.vy;
+    if (dino.current.y >= GROUND_Y - DINO_HEIGHT) {
+      dino.current.y = GROUND_Y - DINO_HEIGHT;
+      dino.current.vy = 0;
+      dino.current.isJumping = false;
+      jumpCount.current = 0; // 바닥에 닿으면 점프 카운트 초기화
+    }
+
+    // draw dino (도트 스타일)
+    drawDotDino(ctx, dino.current.x, dino.current.y);
+
+    // 난이도 조절: 점수 500점 단위로 속도/장애물 생성 확률/크기 증가
+    const difficulty = Math.floor(score / 500);
+    // 기본값: 0.02, 500점마다 0.005씩 증가(최대 0.05)
+    const obstacleProb = Math.min(0.02 + difficulty * 0.005, 0.05);
+    // 장애물 크기도 500점마다 2px씩 증가(최대 30)
+    const obsWidth = Math.min(OBSTACLE_WIDTH + difficulty * 2, 30);
+    const obsHeight = Math.min(OBSTACLE_HEIGHT + difficulty * 2, 40);
+    if (Math.random() < obstacleProb) {
+      obstacles.current.push({
+        x: CANVAS_WIDTH,
+        y: GROUND_Y - obsHeight,
+        width: obsWidth,
+        height: obsHeight,
+      });
+    }
+
+    // update obstacles
+    obstacles.current.forEach((obs) => {
+      obs.x -= speed.current;
+    });
+    obstacles.current = obstacles.current.filter((obs) => obs.x + obs.width > 0);
+
+    // draw obstacles
+    ctx.fillStyle = "#2ea043"; // 더 진한 녹색
+    obstacles.current.forEach((obs) => {
+      ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+    });
+
+    // collision detection
+    let collided = false;
+    obstacles.current.forEach((obs) => {
+      const dx = dino.current.x;
+      const dy = dino.current.y;
+      if (
+        dx < obs.x + obs.width &&
+        dx + DINO_WIDTH > obs.x &&
+        dy < obs.y + obs.height &&
+        dy + DINO_HEIGHT > obs.y
+      ) {
+        collided = true;
+      }
+    });
+    if (collided) {
+      setIsGameOver(true);
+      cancelAnimationFrame(animationRef.current);
+      return;
+    }
+
+    // draw score
+    ctx.fillStyle = "#adbac7"; // 밝은 회색
+    ctx.font = "16px Arial";
+    ctx.fillText(`Score: ${score}`, 10, 20);
+
+    // update score and speed
+    setScore((prev) => prev + 1);
+    if (score > 0 && score % 500 === 0) {
+      speed.current += 1; // 500점마다 속도 증가
+    }
+
+    animationRef.current = requestAnimationFrame(gameLoop);
   };
 
   return (
-    <div className="space-y-4">
-      <div className="text-center">
-        <h3 className="text-github-text font-bold text-xl mb-3">🦖 Dino Runner</h3>
-        <p className="text-github-muted text-base mb-4">
-          스페이스바 또는 ↑로 점프, ↓로 숙이기
-        </p>
-      </div>
-      {/* 도트 게임 화면 */}
-      <div className="relative flex justify-center items-end" style={{ width: GAME_WIDTH, height: GAME_HEIGHT, background: '#1c2128', borderRadius: 8, border: '1px solid #30363d' }}>
-        {/* 지면 */}
-        <DotGround width={GAME_WIDTH} y={GROUND_Y + DINO_HEIGHT} />
-        {/* 공룡 */}
-        <DotDino x={DINO_START_X} y={gameState.dinoY + (gameState.isDucking ? 20 : 0)} size={gameState.isDucking ? DINO_HEIGHT / 2 : DINO_HEIGHT} />
-        {/* 장애물 */}
-        {gameState.obstacles.map((obs, i) =>
-          obs.type === 'cactus' ? (
-            <DotMeteor key={i} x={obs.x} y={obs.y} size={OBSTACLE_WIDTH} />
-          ) : (
-            <DotPteranodon key={i} x={obs.x} y={obs.y} size={OBSTACLE_WIDTH} frame={pteranodonFrame} />
-          )
-        )}
-        {/* 점수판 */}
-        <div style={{ position: 'absolute', left: 10, top: 10, color: '#f0f6fc', fontFamily: 'monospace', fontSize: 18, textShadow: '1px 1px 0 #222' }}>
-          Score: {gameState.score}<br />
-          High Score: {gameState.highScore}<br />
-          Speed: {gameState.gameSpeed}
-        </div>
-      </div>
-      {/* 게임 컨트롤 */}
-      <div className="flex justify-center space-x-4">
-        {!gameState.isPlaying && !gameState.isGameOver && (
+    <div
+      style={{
+        textAlign: "center",
+        padding: "20px",
+        background: "#22272e",
+        minHeight: "320px",
+        borderRadius: "8px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        maxWidth: "100vw",
+        overflowX: "hidden",
+        boxSizing: "border-box",
+      }}
+    >
+      <h2 style={{ color: "#adbac7" }}>Dino Runner</h2>
+      <canvas
+        ref={canvasRef}
+        width={CANVAS_WIDTH}
+        height={CANVAS_HEIGHT}
+        style={{
+          border: "1px solid #444c56",
+          background: "#2d333b",
+          borderRadius: "6px",
+          display: "block",
+          margin: "0 auto",
+          maxWidth: "100%",
+          height: "auto",
+          boxSizing: "border-box",
+        }}
+        onTouchStart={handleTouchStart}
+      />
+      <div style={{ marginTop: "10px", color: "#adbac7" }}>Score: {score}</div>
+      {isGameOver && (
+        <div style={{ marginTop: "16px" }}>
+          <div style={{ color: "#f85149", fontSize: "20px", marginBottom: "12px" }}>Game Over!</div>
+          <div style={{ color: '#adbac7', marginTop: 8 }}>{saveMsg}</div>
           <button
-            onClick={startGame}
-            className="bg-yellow-600 text-white px-6 py-2 rounded font-bold border-2 border-yellow-300 shadow-dot hover:bg-yellow-700 transition-colors"
-            style={{ fontFamily: 'monospace', fontSize: 18 }}
+            onClick={resetGame}
+            style={{
+              background: "#238636",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              padding: "10px 28px",
+              fontSize: "18px",
+              fontWeight: 600,
+              cursor: "pointer",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+              transition: "background 0.2s",
+            }}
           >
-            게임 시작
+            재시작
           </button>
-        )}
-        {gameState.isGameOver && (
-          <div className="text-center space-y-3">
-            <div className="text-github-text font-bold text-lg">
-              게임 오버! 점수: {gameState.score}
-            </div>
-            {!showScoreInput ? (
-              <button
-                onClick={() => setShowScoreInput(true)}
-                className="bg-yellow-600 text-white px-4 py-2 rounded font-bold border-2 border-yellow-300 shadow-dot hover:bg-yellow-700 transition-colors"
-                style={{ fontFamily: 'monospace', fontSize: 16 }}
-              >
-                점수 저장하기
-              </button>
-            ) : (
-              <form onSubmit={e => { e.preventDefault(); saveScore(); }} className="flex flex-col items-center space-y-2">
-                <input
-                  type="text"
-                  value={nickname}
-                  onChange={e => setNicknameState(e.target.value)}
-                  placeholder="닉네임 입력"
-                  className="px-2 py-1 border rounded text-black"
-                  style={{ fontFamily: 'monospace', fontSize: 16 }}
-                />
-                <button
-                  type="submit"
-                  className="bg-yellow-600 text-white px-4 py-1 rounded font-bold border-2 border-yellow-300 shadow-dot hover:bg-yellow-700 transition-colors"
-                  style={{ fontFamily: 'monospace', fontSize: 16 }}
-                >
-                  저장
-                </button>
-              </form>
-            )}
-            <button
-              onClick={startGame}
-              className="bg-gray-700 text-white px-4 py-2 rounded font-bold border-2 border-gray-400 shadow-dot hover:bg-gray-800 transition-colors"
-              style={{ fontFamily: 'monospace', fontSize: 16 }}
-            >
-              다시 시작
-            </button>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
+      {/* 디노러너 랭킹 (금은동) 제거됨 */}
     </div>
   );
 } 
