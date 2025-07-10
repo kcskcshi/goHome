@@ -59,13 +59,21 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
   // 꼬맨틀 게임 스코어 가져오기 (오늘 날짜 기준)
   const fetchGameScores = async () => {
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      // 한국시간(UTC+9) 기준 오늘 날짜 구하기
+      const now = new Date();
+      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const KR_TIME_DIFF = 9 * 60 * 60 * 1000;
+      const krNow = new Date(utc + KR_TIME_DIFF);
+      const yyyy = krNow.getFullYear();
+      const mm = String(krNow.getMonth() + 1).padStart(2, '0');
+      const dd = String(krNow.getDate()).padStart(2, '0');
+      const todayStr = `${yyyy}-${mm}-${dd}`;
       const { data, error } = await getSupabase()
         .from('game_scores')
         .select('*')
         .eq('game', 'commantle')
-        .gte('created_at', today + 'T00:00:00+09:00')
-        .lte('created_at', today + 'T23:59:59+09:00')
+        .gte('created_at', todayStr + 'T00:00:00+09:00')
+        .lte('created_at', todayStr + 'T23:59:59+09:00')
         .order('score', { ascending: true })
         .order('created_at', { ascending: true });
       if (error) throw error;
