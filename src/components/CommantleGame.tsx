@@ -56,7 +56,6 @@ function getFeedback(score: number): {msg: string, emoji: string} {
 export default function CommantleGame({ uuid, nickname }: { uuid: string, nickname: string }) {
   const [keyword, setKeyword] = useState<string | null>(null);
   const [related, setRelated] = useState<string[]>([]);
-  const [showHint, setShowHint] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{text: string, date: string, sim?: number}[]>([]);
   const [loading, setLoading] = useState(true);
@@ -168,6 +167,7 @@ export default function CommantleGame({ uuid, nickname }: { uuid: string, nickna
     if (sim >= 1.0) {
       setIsCorrect(true);
       localStorage.setItem(CORRECT_KEY, JSON.stringify({ date: today, keyword: keyword }));
+      console.log('[Commantle] addGameScore 호출', { score: next.length, uuid, nickname });
       await addGameScore(next.length, uuid, nickname, 'commantle');
       if (typeof fetchGameScores === 'function') {
         await fetchGameScores();

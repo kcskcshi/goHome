@@ -112,15 +112,19 @@ export default function DinoRunnerGame({ uuid, nickname }: { uuid: string, nickn
       (async () => {
         try {
           const scores = await fetchDinoScores();
+          console.log('[DinoRunner] fetchDinoScores:', scores);
           const myScore = scores.find(s => s.uuid === uuid);
+          console.log('[DinoRunner] uuid:', uuid, 'nickname:', nickname, 'score:', score, 'myScore:', myScore);
           if (!myScore || score > myScore.score) {
+            console.log('[DinoRunner] addGameScore 호출');
             await addGameScore(score, uuid, nickname, 'dino');
             setSaveMsg('신기록! 랭킹에 반영됩니다.');
           } else {
             setSaveMsg('기존 최고점 미달, 저장되지 않습니다.');
           }
           setHasSaved(true);
-        } catch {
+        } catch (err) {
+          console.error('[DinoRunner] 저장 실패', err);
           setSaveMsg('저장 실패! 다시 시도해 주세요.');
           setHasSaved(true);
         }
