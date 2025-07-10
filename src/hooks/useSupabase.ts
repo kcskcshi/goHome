@@ -132,9 +132,8 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
   }
 
   // 게임 스코어 추가 (게임 타입별)
-  const addGameScore = async (score: number, id: string, nickname: string, game: string = 'commantle') => {
+  const addGameScore = async (score: number, uuid: string, nickname: string, game: string = 'commantle') => {
     try {
-      // id는 uuid 타입이어야 함
       // 오늘 날짜(한국시간) 기준 기존 기록 있는지 확인
       const now = new Date();
       const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
@@ -147,7 +146,7 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
       const { data: exist, error: existError } = await getSupabase()
         .from('game_scores')
         .select('*')
-        .eq('uuid', id)
+        .eq('uuid', uuid)
         .eq('game', game)
         .gte('created_at', todayStr + 'T00:00:00+09:00')
         .lte('created_at', todayStr + 'T23:59:59+09:00');
@@ -165,7 +164,7 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
       } else {
         const { error } = await getSupabase()
           .from('game_scores')
-          .insert([{ id, uuid: id, nickname, game, score }]);
+          .insert([{ uuid, nickname, game, score }]);
         if (error) throw error;
       }
       await fetchGameScores();
