@@ -24,13 +24,32 @@ function getChoseong(word: string): string {
 const STORAGE_KEY = 'commantle-messages';
 const CORRECT_KEY = 'commantle-correct';
 
-function calcJamoSimilarity(a: string, b: string): number {
-  const aj = Hangul.d(a, true).flat();
-  const bj = Hangul.d(b, true).flat();
-  const setA = new Set(aj);
-  const setB = new Set(bj);
-  const intersection = [...setA].filter(x => setB.has(x));
-  return intersection.length / Math.max(setA.size, setB.size, 1);
+// Levenshtein 거리 계산 함수
+function levenshtein(a: string, b: string): number {
+  const matrix = Array.from({ length: a.length + 1 }, () =>
+    Array(b.length + 1).fill(0)
+  );
+  for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+  for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+  }
+  return matrix[a.length][b.length];
+}
+
+// 자모 단위로 변환 후 Levenshtein 유사도 계산
+function calcLevenshteinSimilarity(a: string, b: string): number {
+  // 한글 자모 분해 후 문자열로 변환
+  const aj = Hangul.d(a, true).flat().join('');
+  const bj = Hangul.d(b, true).flat().join('');
+  const dist = levenshtein(aj, bj);
+  return 1 - dist / Math.max(aj.length, bj.length, 1);
 }
 
 function getFeedback(score: number): {msg: string, emoji: string} {
@@ -106,7 +125,7 @@ export default function CommantleGame({ uuid, nickname }: { uuid: string, nickna
     e.preventDefault();
     if (!input.trim() || !keyword) return;
     const today = new Date().toISOString().slice(0, 10);
-    const sim = calcJamoSimilarity(input.trim(), keyword);
+    const sim = calcLevenshteinSimilarity(input.trim(), keyword);
     const fb = getFeedback(sim);
     setFeedback({ score: sim, msg: fb.msg, emoji: fb.emoji });
     const newMsg = { text: input.trim(), date: today, sim };
