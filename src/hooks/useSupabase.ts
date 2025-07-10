@@ -135,10 +135,39 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
   const addGameScore = async (score: number, id: string, nickname: string, game: string = 'commantle') => {
     try {
       // id는 uuid 타입이어야 함
-      const { error } = await getSupabase()
+      // 오늘 날짜(한국시간) 기준 기존 기록 있는지 확인
+      const now = new Date();
+      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const KR_TIME_DIFF = 9 * 60 * 60 * 1000;
+      const krNow = new Date(utc + KR_TIME_DIFF);
+      const yyyy = krNow.getFullYear();
+      const mm = String(krNow.getMonth() + 1).padStart(2, '0');
+      const dd = String(krNow.getDate()).padStart(2, '0');
+      const todayStr = `${yyyy}-${mm}-${dd}`;
+      const { data: exist, error: existError } = await getSupabase()
         .from('game_scores')
-        .insert([{ id, nickname, game, score }]);
-      if (error) throw error;
+        .select('*')
+        .eq('uuid', id)
+        .eq('game', game)
+        .gte('created_at', todayStr + 'T00:00:00+09:00')
+        .lte('created_at', todayStr + 'T23:59:59+09:00');
+      if (existError) throw existError;
+      if (exist && exist.length > 0) {
+        // 이미 기록이 있으면 더 적은 시도 횟수로만 갱신
+        const prevScore = exist[0].score;
+        if (score < prevScore) {
+          const { error: updateError } = await getSupabase()
+            .from('game_scores')
+            .update({ score })
+            .eq('id', exist[0].id);
+          if (updateError) throw updateError;
+        }
+      } else {
+        const { error } = await getSupabase()
+          .from('game_scores')
+          .insert([{ id, uuid: id, nickname, game, score }]);
+        if (error) throw error;
+      }
       await fetchGameScores();
     } catch (error) {
       console.error('게임 스코어 추가 실패:', error);

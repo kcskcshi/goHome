@@ -2,18 +2,10 @@ import React, { useEffect, useState } from 'react';
 import Hangul from 'hangul-js';
 import { useSupabase } from '@/hooks/useSupabase';
 import DinoRunnerGame from './DinoRunnerGame';
+import { sampleSize } from 'lodash';
 
 // 100개 단어 상수 배열 (내장 배열 제거, 외부 JSON에서 불러옴)
 // const COMMANTLE_WORDS = [ ... ]; // 제거
-
-function getTodayKeyword(words: string[]): string {
-  // 오늘 날짜(yyyy-mm-dd) 기준 인덱스 계산 (매일 자정 00시 갱신)
-  const now = new Date();
-  const base = new Date(2024, 0, 1, 0, 0, 0); // 2024-01-01 00:00:00 기준
-  const diffDays = Math.floor((now.getTime() - base.getTime()) / (1000 * 60 * 60 * 24));
-  const idx = diffDays % words.length;
-  return words[idx];
-}
 
 // 초성 추출 함수
 function getChoseong(word: string): string {
@@ -23,6 +15,7 @@ function getChoseong(word: string): string {
 
 const STORAGE_KEY = 'commantle-messages';
 const CORRECT_KEY = 'commantle-correct';
+const HINT_KEY = 'commantle-hint';
 
 // Levenshtein 거리 계산 함수
 function levenshtein(a: string, b: string): number {
@@ -62,6 +55,8 @@ function getFeedback(score: number): {msg: string, emoji: string} {
 
 export default function CommantleGame({ uuid, nickname }: { uuid: string, nickname: string }) {
   const [keyword, setKeyword] = useState<string | null>(null);
+  const [related, setRelated] = useState<string[]>([]);
+  const [showHint, setShowHint] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{text: string, date: string, sim?: number}[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,6 +65,7 @@ export default function CommantleGame({ uuid, nickname }: { uuid: string, nickna
   const [isCorrect, setIsCorrect] = useState(false);
   const { addGameScore, fetchGameScores } = useSupabase();
   const [activeTab, setActiveTab] = useState<'commantle' | 'dino'>('commantle');
+  const [hintCount, setHintCount] = useState(0);
 
   useEffect(() => {
     // 외부 JSON에서 단어 불러오기
@@ -82,8 +78,17 @@ export default function CommantleGame({ uuid, nickname }: { uuid: string, nickna
         if (!data.words || !Array.isArray(data.words) || data.words.length === 0) {
           throw new Error('단어 리스트가 비어있습니다.');
         }
-        const todayKeyword = getTodayKeyword(data.words);
-        setKeyword(todayKeyword);
+        // 새 구조: [{keyword, related}] 배열
+        const wordsArr = data.words;
+        const todayIdx = (() => {
+          const now = new Date();
+          const base = new Date(2024, 0, 1, 0, 0, 0);
+          const diffDays = Math.floor((now.getTime() - base.getTime()) / (1000 * 60 * 60 * 24));
+          return diffDays % wordsArr.length;
+        })();
+        const todayObj = wordsArr[todayIdx];
+        setKeyword(todayObj.keyword);
+        setRelated(todayObj.related || []);
         setLoading(false);
 
         // 오늘 날짜 기준 메시지/정답 기록 관리 (키워드까지 체크)
@@ -104,7 +109,7 @@ export default function CommantleGame({ uuid, nickname }: { uuid: string, nickna
         if (correctRaw) {
           try {
             const correctObj = JSON.parse(correctRaw);
-            if (correctObj && correctObj.date === today && correctObj.keyword === todayKeyword) {
+            if (correctObj && correctObj.date === today && correctObj.keyword === todayObj.keyword) {
               isCorrectToday = true;
             } else {
               localStorage.removeItem(CORRECT_KEY);
@@ -114,6 +119,24 @@ export default function CommantleGame({ uuid, nickname }: { uuid: string, nickna
           }
         }
         setIsCorrect(isCorrectToday);
+        // 힌트 카운트: 날짜 다르면 0으로 초기화
+        const hintRaw = localStorage.getItem(HINT_KEY);
+        let todayHintCount = 0;
+        if (hintRaw) {
+          try {
+            const hintObj = JSON.parse(hintRaw);
+            if (hintObj && hintObj.date === today) {
+              todayHintCount = hintObj.count || 0;
+            } else {
+              localStorage.setItem(HINT_KEY, JSON.stringify({ date: today, count: 0 }));
+            }
+          } catch {
+            localStorage.setItem(HINT_KEY, JSON.stringify({ date: today, count: 0 }));
+          }
+        } else {
+          localStorage.setItem(HINT_KEY, JSON.stringify({ date: today, count: 0 }));
+        }
+        setHintCount(todayHintCount);
       })
       .catch(err => {
         setError(err.message || '단어 불러오기 오류');
@@ -133,18 +156,31 @@ export default function CommantleGame({ uuid, nickname }: { uuid: string, nickna
     setMessages(next);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     setInput('');
+    // 오답 카운트 증가 및 힌트 카운트 관리
+    if (sim < 1.0) {
+      const newHintCount = messages.length + 1;
+      if (newHintCount >= 30 && hintCount === 0) {
+        setHintCount(1);
+        localStorage.setItem(HINT_KEY, JSON.stringify({ date: today, count: 1 }));
+      }
+    }
     // 100% 일치해야만 정답 처리
     if (sim >= 1.0) {
       setIsCorrect(true);
-      // 정답 기록에 {date, keyword}로 저장
-      localStorage.setItem(CORRECT_KEY, JSON.stringify({ date: today, keyword }));
-      // 100% 일치 시, 시도 횟수 기록
+      localStorage.setItem(CORRECT_KEY, JSON.stringify({ date: today, keyword: keyword }));
       await addGameScore(next.length, uuid, nickname, 'commantle');
-      // 정답 맞춘 후 순위 즉시 새로고침
       if (typeof fetchGameScores === 'function') {
         await fetchGameScores();
       }
     }
+  };
+
+  // 연관 단어 힌트 (2~3개 랜덤, 없으면 초성)
+  const getHint = () => {
+    if (related && related.length > 0) {
+      return sampleSize(related, Math.min(3, related.length)).join(', ');
+    }
+    return getChoseong(keyword || '');
   };
 
   // Top 5 유사도 높은 메시지 추출
@@ -183,6 +219,11 @@ export default function CommantleGame({ uuid, nickname }: { uuid: string, nickna
               <div className="text-github-muted text-sm mb-3">
                 💡 정확히 100% 일치해야 게임이 완료됩니다!
               </div>
+              {hintCount > 0 && (
+                <div className="hint-box bg-yellow-50 border border-yellow-300 rounded p-2 my-2 text-yellow-800">
+                  <strong>힌트:</strong> {getHint()}
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="flex gap-2 mb-2">
                 <input
                   type="text"
