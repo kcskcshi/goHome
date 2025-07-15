@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { cn } from "@/lib/utils";
 
 interface CommuteButtonProps {
   type: '출근' | '퇴근';
@@ -32,47 +33,40 @@ export default function CommuteButton({
     }
   };
 
-  const getButtonText = () => {
-    if (isLoading) return '처리 중...';
-    if (hasRecorded) return `${type} 완료`;
-    return type;
-  };
-
-  const getButtonColor = () => {
-    if (hasRecorded) {
-      return 'bg-github-muted text-github-text cursor-not-allowed';
-    }
-    if (type === '출근') {
-      return 'bg-github-green hover:bg-github-green-hover text-white';
-    }
-    return 'bg-orange-600 hover:bg-orange-700 text-white';
-  };
-
   return (
-    <div className="space-y-2">
-      <button
-        onClick={handleClick}
-        disabled={disabled || isLoading || hasRecorded}
-        className={`
-          w-full py-4 px-6 rounded-lg font-medium text-lg transition-all duration-200
-          ${getButtonColor()}
-          ${isPressed ? 'scale-95' : ''}
-          ${disabled || isLoading || hasRecorded ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg'}
-        `}
-      >
-        {isLoading && (
-          <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-        )}
-        {getButtonText()}
-      </button>
-      
+    <div className="flex flex-col space-y-4">
+      {/* 출근/퇴근 상태 표시 */}
       {hasRecorded && recordTime && (
-        <div className="text-center">
-          <div className="text-github-muted text-sm">
+        <div className="space-y-3">
+          <h2 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            오늘의 {type}
+          </h2>
+          <p className="text-[13px] text-muted-foreground">
             {type} 시간: {recordTime}
-          </div>
+          </p>
         </div>
       )}
+      {/* 버튼 영역 */}
+      <div className="flex flex-col items-center justify-center mt-2">
+        <button
+          onClick={handleClick}
+          disabled={disabled || isLoading || hasRecorded}
+          className={cn(
+            "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors",
+            "bg-white text-black border border-input shadow-sm",
+            "hover:bg-black hover:text-white",
+            "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+            "disabled:pointer-events-none disabled:opacity-50",
+            "h-9 px-8 py-2 mt-1",
+            isPressed && "scale-98"
+          )}
+        >
+          {isLoading && (
+            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          )}
+          {type}
+        </button>
+      </div>
     </div>
   );
 } 

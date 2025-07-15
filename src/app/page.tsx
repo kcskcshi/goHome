@@ -1,14 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import CommuteButton from '@/components/CommuteButton';
+import ProfileWithCommute from '@/components/ProfileWithCommute';
 import MoodInput from '@/components/MoodInput';
 import StatsChart from '@/components/StatsChart';
 import FeedSection from '@/components/FeedSection';
 import { useCommute } from '@/hooks/useCommute';
 import { SupabaseProvider, useSupabase } from '@/hooks/useSupabase';
 import CommantleGame from '@/components/CommantleGame';
-import Image from 'next/image';
 
 // 형용사/직업 랜덤 조합
 const ADJECTIVES = [
@@ -38,8 +37,6 @@ function HomeContent() {
     recordCommute, 
     getTodayCommute, 
     getTodayLeave, 
-    hasCommutedToday, 
-    hasLeftToday,
     uuid
   } = useCommute();
   
@@ -107,9 +104,6 @@ function HomeContent() {
     });
   };
 
-  // 출근 여부에 따른 퇴근 버튼 비활성화
-  const canLeave = hasCommutedToday();
-
   return (
     <div className="min-h-screen bg-github-bg text-github-text">
       {/* 헤더 */}
@@ -132,67 +126,17 @@ function HomeContent() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* 좌측 사이드바 - 프로필 영역 */}
           <div className="lg:col-span-1 space-y-6">
-            {/* 프로필 카드 */}
-            <div className="bg-github-card border border-github-border rounded-lg p-6">
-              <div className="text-center">
-                <Image
-                  src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(nickname)}`}
-                  alt="도트 프로필"
-                  width={112}
-                  height={112}
-                  className="w-28 h-28 rounded-full mx-auto mb-4 border border-github-border bg-white"
-                  priority
-                />
-                <h2 className="text-github-text font-bold text-xl mb-2">{profilePhrase}</h2>
-                <p className="text-github-muted text-base mb-4">{nickname}</p>
-                {/* 오늘 출퇴근 상태 */}
-                <div className="space-y-2 text-sm">
-                  {getTodayCommute() && (
-                    <div className="flex items-center justify-between p-2 bg-github-bg rounded">
-                      <span className="text-github-muted">출근</span>
-                      <span className="text-github-green font-medium">
-                        {formatTime(getTodayCommute()!.timestamp)}
-                      </span>
-                    </div>
-                  )}
-                  {getTodayLeave() && (
-                    <div className="flex items-center justify-between p-2 bg-github-bg rounded">
-                      <span className="text-github-muted">퇴근</span>
-                      <span className="text-orange-400 font-medium">
-                        {formatTime(getTodayLeave()!.timestamp)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            {/* 출근/퇴근 버튼 */}
-            <div className="bg-github-card border border-github-border rounded-lg p-6">
-              <h3 className="text-github-text font-bold text-lg mb-4">오늘의 출퇴근</h3>
-              <div className="space-y-3">
-                <CommuteButton
-                  type="출근"
-                  onClick={() => handleCommute('출근')}
-                  isLoading={commuteLoading || isPageLoading}
-                  disabled={isPageLoading}
-                  hasRecorded={hasCommutedToday()}
-                  recordTime={getTodayCommute() ? formatTime(getTodayCommute()!.timestamp) : undefined}
-                />
-                <CommuteButton
-                  type="퇴근"
-                  onClick={() => handleCommute('퇴근')}
-                  isLoading={commuteLoading || isPageLoading}
-                  disabled={isPageLoading || !canLeave}
-                  hasRecorded={hasLeftToday()}
-                  recordTime={getTodayLeave() ? formatTime(getTodayLeave()!.timestamp) : undefined}
-                />
-              </div>
-              {!canLeave && !hasCommutedToday() && !isPageLoading && (
-                <div className="text-github-muted text-xs mt-2 text-center">
-                  💡 출근 후에 퇴근할 수 있습니다
-                </div>
-              )}
-            </div>
+            {/* 프로필 + 출퇴근 통합 카드 */}
+            <ProfileWithCommute
+              nickname={profilePhrase}
+              userId={nickname}
+              onCommute={handleCommute}
+              commuteTime={{
+                start: getTodayCommute() ? formatTime(getTodayCommute()!.timestamp) : undefined,
+                end: getTodayLeave() ? formatTime(getTodayLeave()!.timestamp) : undefined
+              }}
+              isLoading={commuteLoading || isPageLoading}
+            />
             {/* 기분 입력 */}
             <MoodInput
               onSubmit={handleMoodSubmit}
