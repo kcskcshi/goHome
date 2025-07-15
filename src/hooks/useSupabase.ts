@@ -12,7 +12,7 @@ interface SupabaseContextType {
   fetchCommutes: () => Promise<void>;
   fetchMoods: () => Promise<void>;
   fetchGameScores: () => Promise<void>;
-  addGameScore: (score: number, user_id: string, nickname: string, game?: string) => Promise<void>;
+  addGameScore: (score: number, uuid: string, nickname: string, game?: string) => Promise<void>; // user_id -> uuid
   fetchDinoScores: () => Promise<GameScoreRecord[]>;
 }
 
@@ -132,9 +132,9 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
   }
 
   // 게임 스코어 추가 (게임 타입별)
-  const addGameScore = async (score: number, user_id: string, nickname: string, game: string = 'commantle') => {
+  const addGameScore = async (score: number, uuid: string, nickname: string, game: string = 'commantle') => {
     try {
-      console.log('[addGameScore] params', { user_id, nickname, game, score });
+      console.log('[addGameScore] params', { uuid, nickname, game, score });
       // 오늘 날짜(한국시간) 기준 기존 기록 있는지 확인
       const now = new Date();
       const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
@@ -150,7 +150,7 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
       const { data: exist, error: existError } = await getSupabase()
         .from('game_scores')
         .select('*')
-        .eq('user_id', user_id)
+        .eq('uuid', uuid)
         .eq('game', game)
         .gte('created_at', todayStr + 'T00:00:00+09:00')
         .lte('created_at', todayStr + 'T23:59:59+09:00')
@@ -175,7 +175,7 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
         console.log('[addGameScore] INSERT');
         const { error } = await getSupabase()
           .from('game_scores')
-          .insert([{ user_id, nickname, game, score, created_at: createdAt }])
+          .insert([{ uuid, nickname, game, score, created_at: createdAt }])
           .select();
         if (error) {
           console.error('[addGameScore] INSERT error:', error);
