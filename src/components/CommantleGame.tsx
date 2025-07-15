@@ -168,7 +168,7 @@ export default function CommantleGame({ uuid, nickname }: { uuid: string, nickna
       setIsCorrect(true);
       localStorage.setItem(CORRECT_KEY, JSON.stringify({ date: today, keyword: keyword }));
       console.log('[Commantle] addGameScore 호출', { score: next.length, id: uuid, nickname });
-      await addGameScore(next.length, uuid, nickname, 'commantle');
+      await addGameScore(next.length, nickname, 'commantle');
       if (typeof fetchGameScores === 'function') {
         await fetchGameScores();
       }

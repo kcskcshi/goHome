@@ -117,7 +117,7 @@ export default function DinoRunnerGame({ uuid, nickname }: { uuid: string, nickn
           console.log('[DinoRunner] uuid:', uuid, 'nickname:', nickname, 'score:', score, 'myScore:', myScore);
           if (!myScore || score > myScore.score) {
             console.log('[DinoRunner] addGameScore 호출');
-            await addGameScore(score, uuid, nickname, 'dino');
+            await addGameScore(score, nickname, 'dino');
             setSaveMsg('신기록! 랭킹에 반영됩니다.');
           } else {
             setSaveMsg('기존 최고점 미달, 저장되지 않습니다.');
