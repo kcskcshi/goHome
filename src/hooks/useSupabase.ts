@@ -12,7 +12,7 @@ interface SupabaseContextType {
   fetchCommutes: () => Promise<void>;
   fetchMoods: () => Promise<void>;
   fetchGameScores: () => Promise<void>;
-  addGameScore: (score: number, id: string, nickname: string, game?: string) => Promise<void>;
+  addGameScore: (score: number, user_id: string, nickname: string, game?: string) => Promise<void>;
   fetchDinoScores: () => Promise<GameScoreRecord[]>;
 }
 
@@ -132,9 +132,9 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
   }
 
   // 게임 스코어 추가 (게임 타입별)
-  const addGameScore = async (score: number, id: string, nickname: string, game: string = 'commantle') => {
+  const addGameScore = async (score: number, user_id: string, nickname: string, game: string = 'commantle') => {
     try {
-      console.log('[addGameScore] params', { id, nickname, game, score });
+      console.log('[addGameScore] params', { user_id, nickname, game, score });
       // 오늘 날짜(한국시간) 기준 기존 기록 있는지 확인
       const now = new Date();
       const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
@@ -144,27 +144,29 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
       const mm = String(krNow.getMonth() + 1).padStart(2, '0');
       const dd = String(krNow.getDate()).padStart(2, '0');
       const todayStr = `${yyyy}-${mm}-${dd}`;
+      const createdAt = krNow.toISOString();
+
+      // 기존 기록 확인 (단일 레코드)
       const { data: exist, error: existError } = await getSupabase()
         .from('game_scores')
         .select('*')
-        .eq('id', id)
+        .eq('user_id', user_id)
         .eq('game', game)
         .gte('created_at', todayStr + 'T00:00:00+09:00')
-        .lte('created_at', todayStr + 'T23:59:59+09:00');
-      console.log('[addGameScore] exist:', exist);
-      if (existError) throw existError;
-      if (exist && exist.length > 0) {
+        .lte('created_at', todayStr + 'T23:59:59+09:00')
+        .single();
+
+      if (existError && existError.code !== 'PGRST116') throw existError; // PGRST116: 레코드 없음
+      if (exist) {
         // 이미 기록이 있으면 더 적은 시도 횟수로만 갱신
-        const prevScore = exist[0].score;
+        const prevScore = exist.score;
         if (score < prevScore) {
           console.log('[addGameScore] UPDATE');
           const { error: updateError } = await getSupabase()
             .from('game_scores')
-            .update({ score })
-            .eq('id', id)
-            .eq('game', game)
-            .gte('created_at', todayStr + 'T00:00:00+09:00')
-            .lte('created_at', todayStr + 'T23:59:59+09:00');
+            .update({ score, created_at: createdAt })
+            .eq('id', exist.id)
+            .select();
           if (updateError) throw updateError;
         } else {
           console.log('[addGameScore] UPDATE SKIP (score not better)');
@@ -173,12 +175,16 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
         console.log('[addGameScore] INSERT');
         const { error } = await getSupabase()
           .from('game_scores')
-          .insert([{ id, nickname, game, score }]);
-        if (error) throw error;
+          .insert([{ user_id, nickname, game, score, created_at: createdAt }])
+          .select();
+        if (error) {
+          console.error('[addGameScore] INSERT error:', error);
+          throw error;
+        }
       }
       await fetchGameScores();
     } catch (error) {
-      console.error('게임 스코어 추가 실패:', error);
+      console.error('[addGameScore] 에러 발생:', error);
       throw error;
     }
   }
