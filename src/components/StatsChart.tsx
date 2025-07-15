@@ -1,43 +1,30 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { CommuteRecord, MoodData } from '@/types';
-import { Radar, PolarArea } from 'react-chartjs-2';
+import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
-  RadialLinearScale,
-  PointElement,
-  LineElement,
-  Filler,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
   Tooltip,
   Legend,
-  PolarAreaController,
-  ArcElement,
 } from 'chart.js';
+// chartjs-plugin-datalabels 타입 import
+import * as ChartDataLabels from 'chartjs-plugin-datalabels';
+import type { Options as DatalabelsOptions } from 'chartjs-plugin-datalabels/types/options';
 
 ChartJS.register(
-  RadialLinearScale,
-  PointElement,
-  LineElement,
-  Filler,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
   Tooltip,
   Legend,
-  PolarAreaController,
-  ArcElement
+  ChartDataLabels
 );
-
-interface StatsData {
-  totalUsers: number;
-  earlyBird: string;
-  nightOwl: string;
-  moodDistribution: { emoji: string; count: number }[];
-  commuteTimesGo: { hour: number; count: number }[];
-  commuteTimesLeave: { hour: number; count: number }[];
-  myGoRank: number | null;
-  myLeaveRank: number | null;
-  goTotal: number;
-  leaveTotal: number;
-}
 
 interface StatsChartProps {
   commutes: CommuteRecord[];
@@ -46,114 +33,89 @@ interface StatsChartProps {
 }
 
 export default function StatsChart({ commutes, moods, myUuid }: StatsChartProps) {
-  const [stats, setStats] = useState<StatsData>({
-    totalUsers: 0,
-    earlyBird: '아직 없음',
-    nightOwl: '아직 없음',
-    moodDistribution: [],
-    commuteTimesGo: [],
-    commuteTimesLeave: [],
-    myGoRank: null,
-    myLeaveRank: null,
-    goTotal: 0,
-    leaveTotal: 0,
-  });
-
-  // 더보기 상태 관리
-  const [showAllMoods, setShowAllMoods] = useState(false);
-
-  // 기분 분포 전체 리스트
+  // stats 상태 제거, 대신 useMemo로 모든 통계 데이터 계산
   const today = new Date();
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
   const todayEnd = todayStart + 24 * 60 * 60 * 1000;
-  const todayMoods = moods.filter(m => m.timestamp >= todayStart && m.timestamp < todayEnd);
-  const moodCounts: { [key: string]: number } = {};
-  todayMoods.forEach(mood => {
-    moodCounts[mood.emoji] = (moodCounts[mood.emoji] || 0) + 1;
-  });
-  const moodDistributionAll = Object.entries(moodCounts)
-    .map(([emoji, count]) => ({ emoji, count }))
-    .sort((a, b) => b.count - a.count);
-  const moodDistribution = showAllMoods ? moodDistributionAll : moodDistributionAll.slice(0, 5);
 
-  useEffect(() => {
-    const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-    const todayEnd = todayStart + 24 * 60 * 60 * 1000;
+  const todayMoods = useMemo(() => moods.filter(m => m.timestamp >= todayStart && m.timestamp < todayEnd), [moods, todayStart, todayEnd]);
+  const todayRecords = useMemo(() => commutes.filter(r => r.timestamp >= todayStart && r.timestamp < todayEnd), [commutes, todayStart, todayEnd]);
 
-    // 오늘 기록만 필터링
-    const todayRecords = commutes.filter(r => r.timestamp >= todayStart && r.timestamp < todayEnd);
-    const todayMoods = moods.filter(m => m.timestamp >= todayStart && m.timestamp < todayEnd);
+  const moodDistribution = useMemo(() => {
+    const moodCounts: { [key: string]: number } = {};
+    todayMoods.forEach(mood => {
+      moodCounts[mood.emoji] = (moodCounts[mood.emoji] || 0) + 1;
+    });
+    return Object.entries(moodCounts)
+      .map(([emoji, count]) => ({ emoji, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [todayMoods]);
 
-    // 출근/퇴근 분리
-    const goRecords = todayRecords.filter(r => r.type === '출근').sort((a, b) => a.timestamp - b.timestamp);
-    const leaveRecords = todayRecords.filter(r => r.type === '퇴근').sort((a, b) => a.timestamp - b.timestamp);
+  const goRecords = useMemo(() => todayRecords.filter(r => r.type === '출근').sort((a, b) => a.timestamp - b.timestamp), [todayRecords]);
+  const leaveRecords = useMemo(() => todayRecords.filter(r => r.type === '퇴근').sort((a, b) => a.timestamp - b.timestamp), [todayRecords]);
 
-    // 내 출근/퇴근 순위
-    const myGoIdx = goRecords.findIndex(r => r.uuid === myUuid);
-    const myLeaveIdx = leaveRecords.findIndex(r => r.uuid === myUuid);
-    const myGoRank = myGoIdx >= 0 ? myGoIdx + 1 : null;
-    const myLeaveRank = myLeaveIdx >= 0 ? myLeaveIdx + 1 : null;
+  const myGoRank = useMemo(() => {
+    const idx = goRecords.findIndex(r => r.uuid === myUuid);
+    return idx >= 0 ? idx + 1 : null;
+  }, [goRecords, myUuid]);
+  const myLeaveRank = useMemo(() => {
+    const idx = leaveRecords.findIndex(r => r.uuid === myUuid);
+    return idx >= 0 ? idx + 1 : null;
+  }, [leaveRecords, myUuid]);
 
-    // 참여자 수 (uuid 기준)
-    const totalUsers = new Set([
-      ...todayMoods.map(m => m.nickname),
-      ...todayRecords.map(r => r.nickname)
-    ]).size;
+  const totalUsers = useMemo(() => new Set([
+    ...todayMoods.map(m => m.nickname),
+    ...todayRecords.map(r => r.nickname)
+  ]).size, [todayMoods, todayRecords]);
 
-    // 출근왕/칼퇴왕
-    const earlyBird = goRecords[0];
-    const nightOwl = leaveRecords[0];
+  const earlyBird = useMemo(() => goRecords[0]?.nickname || '아직 없음', [goRecords]);
+  const nightOwl = useMemo(() => leaveRecords[0]?.nickname || '아직 없음', [leaveRecords]);
 
-    // 출근 시간 분포
-    const hourCountsGo: { [key: number]: number } = {};
+  const commuteTimesGo = useMemo(() => {
+    const hourCounts: { [key: number]: number } = {};
     goRecords.forEach(record => {
       const hour = new Date(record.timestamp).getHours();
-      hourCountsGo[hour] = (hourCountsGo[hour] || 0) + 1;
+      hourCounts[hour] = (hourCounts[hour] || 0) + 1;
     });
-    const commuteTimesGo = Object.entries(hourCountsGo)
+    return Object.entries(hourCounts)
       .map(([hour, count]) => ({ hour: parseInt(hour), count }))
       .sort((a, b) => a.hour - b.hour);
+  }, [goRecords]);
 
-    // 퇴근 시간 분포
-    const hourCountsLeave: { [key: number]: number } = {};
+  const commuteTimesLeave = useMemo(() => {
+    const hourCounts: { [key: number]: number } = {};
     leaveRecords.forEach(record => {
       const hour = new Date(record.timestamp).getHours();
-      hourCountsLeave[hour] = (hourCountsLeave[hour] || 0) + 1;
+      hourCounts[hour] = (hourCounts[hour] || 0) + 1;
     });
-    const commuteTimesLeave = Object.entries(hourCountsLeave)
+    return Object.entries(hourCounts)
       .map(([hour, count]) => ({ hour: parseInt(hour), count }))
       .sort((a, b) => a.hour - b.hour);
+  }, [leaveRecords]);
 
-    setStats({
-      totalUsers,
-      earlyBird: earlyBird?.nickname || '아직 없음',
-      nightOwl: nightOwl?.nickname || '아직 없음',
-      moodDistribution,
-      commuteTimesGo,
-      commuteTimesLeave,
-      myGoRank,
-      myLeaveRank,
-      goTotal: goRecords.length,
-      leaveTotal: leaveRecords.length,
-    });
+  useEffect(() => {
+    // 참여자 수 (uuid 기준)
+    // 출근왕/칼퇴왕
+    // 출근 시간 분포
+    // 퇴근 시간 분포
   }, [commutes, moods, myUuid, moodDistribution]);
 
   return (
-    <div className="bg-github-card border border-thin border-github-borderLight rounded-md p-4">
+    <div className="bg-github-card border border-thin border-github-border rounded-md p-4">
       <h2 className="text-github-text font-bold mb-4 text-lg">📊 오늘의 통계</h2>
-      {(stats.myGoRank || stats.myLeaveRank) && (
+      {(myGoRank || myLeaveRank) && (
         <div className="mb-3 text-center text-sm">
-          <span className="font-bold text-github-green">{stats.myGoRank ? `출근 ${stats.myGoRank}등` : ''}</span>
-          {stats.myGoRank && stats.myLeaveRank && <span className="mx-2">|</span>}
-          <span className="font-bold text-purple-500">{stats.myLeaveRank ? `퇴근 ${stats.myLeaveRank}등` : ''}</span>
-          <span className="ml-2 text-github-muted text-xs">(출근 {stats.goTotal}명, 퇴근 {stats.leaveTotal}명)</span>
+          <span className="font-bold text-github-green">{myGoRank ? `출근 ${myGoRank}등` : ''}</span>
+          {myGoRank && myLeaveRank && <span className="mx-2">|</span>}
+          <span className="font-bold text-purple-500">{myLeaveRank ? `퇴근 ${myLeaveRank}등` : ''}</span>
+          <span className="ml-2 text-github-muted text-xs">(출근 {goRecords.length}명, 퇴근 {leaveRecords.length}명)</span>
         </div>
       )}
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="text-center">
           <div className="text-base font-bold text-github-green mb-1">
-            {stats.totalUsers}
+            {totalUsers}
           </div>
           <div className="text-github-muted text-xs">참여자</div>
         </div>
@@ -161,97 +123,91 @@ export default function StatsChart({ commutes, moods, myUuid }: StatsChartProps)
           <div className="text-base font-bold text-yellow-500 mb-1">🌅</div>
           <div className="text-github-muted text-xs">출근왕</div>
           <div className="text-github-text text-xs mt-1 truncate">
-            {stats.earlyBird}
+            {earlyBird}
           </div>
         </div>
         <div className="text-center">
           <div className="text-base font-bold text-purple-500 mb-1">🌙</div>
           <div className="text-github-muted text-xs">칼퇴왕</div>
           <div className="text-github-text text-xs mt-1 truncate">
-            {stats.nightOwl}
+            {nightOwl}
           </div>
         </div>
       </div>
       {/* 기분/출근/퇴근 분포 차트 한 줄 배치 */}
       <div className="flex flex-col md:flex-row gap-4 justify-center items-stretch mb-2">
-        {/* 기분 분포 (Radar) */}
-        <div className="flex-1 min-w-[180px] bg-github-card border border-thin border-github-borderLight rounded-md flex flex-col items-center p-2">
+        {/* 기분 분포 (BarChart) */}
+        <div className="flex-1 min-w-[180px] bg-github-card border border-thin border-github-border rounded-md flex flex-col items-center p-2">
           <h3 className="text-github-text text-xs font-medium mb-2 text-center flex items-center">
-            <span className="w-2 h-2 rounded-full bg-green-400 mr-2"></span>
+            <span className="w-2 h-2 rounded-full bg-gray-400 mr-2"></span>
             기분 분포
           </h3>
-          {stats.moodDistribution.length > 0 ? (
+          {moodDistribution.length > 0 ? (
             <>
-              <Radar
+              <Bar
                 data={{
-                  labels: stats.moodDistribution.map((m) => m.emoji),
+                  labels: moodDistribution.map((m) => m.emoji),
                   datasets: [
                     {
                       label: '기분 분포',
-                      data: stats.moodDistribution.map((m) => m.count),
-                      backgroundColor: 'rgba(34,197,94,0.2)',
-                      borderColor: 'rgba(34,197,94,1)',
-                      borderWidth: 2,
-                      pointBackgroundColor: 'rgba(34,197,94,1)',
-                      pointBorderColor: '#fff',
-                      pointRadius: 5,
+                      data: moodDistribution.map((m) => m.count),
+                      backgroundColor: 'rgba(107,114,128,0.7)', // gray-500
+                      borderColor: 'rgba(55,65,81,1)', // gray-700
+                      borderWidth: 1,
+                      borderRadius: 8,
+                      maxBarThickness: 32,
                     },
                   ],
                 }}
                 options={{
                   responsive: true,
-                  plugins: { legend: { display: false } },
+                  plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                      anchor: 'end',
+                      align: 'end',
+                      color: '#111',
+                      font: { weight: 'bold', size: 16 },
+                      formatter: (value: number) => {
+                        return `${value}`;
+                      },
+                    } as DatalabelsOptions,
+                  },
                   scales: {
-                    r: {
-                      angleLines: { display: false },
-                      grid: { color: '#333' },
-                      pointLabels: { color: '#fff', font: { size: 12 } },
-                      ticks: { color: '#fff', stepSize: 1, backdropColor: 'transparent' },
-                      min: 0,
+                    x: {
+                      grid: { display: false },
+                      ticks: { color: '#6b7280', font: { size: 14 } },
+                    },
+                    y: {
+                      beginAtZero: true,
+                      grid: { color: '#e5e7eb' },
+                      ticks: { color: '#6b7280', stepSize: 1 },
                     },
                   },
                 }}
-                style={{ maxWidth: 160, margin: '0 auto' }}
+                plugins={[ChartDataLabels.default]}
+                style={{ maxHeight: 180, maxWidth: 220, margin: '0 auto' }}
               />
-              {/* 기분 분포 리스트 */}
-              <ul className="flex flex-wrap gap-2 justify-center mt-2">
-                {moodDistribution.map((m, i) => (
-                  <li key={i} className="flex items-center gap-1 text-sm bg-github-bg border border-github-border rounded px-2 py-1">
-                    <span>{m.emoji}</span>
-                    <span className="text-github-muted text-xs">{m.count}명</span>
-                  </li>
-                ))}
-              </ul>
-              {moodDistributionAll.length > 5 && (
-                <button
-                  className="mt-2 text-xs text-github-green underline hover:text-github-green/80"
-                  onClick={() => setShowAllMoods(v => !v)}
-                >
-                  {showAllMoods ? '접기' : '더보기'}
-                </button>
-              )}
             </>
           ) : (
             <div className="text-github-muted text-center py-4 text-xs">데이터 없음</div>
           )}
         </div>
-        {/* 출근 시간 분포 (PolarArea) */}
-        <div className="flex-1 min-w-[180px] bg-github-card border border-thin border-github-borderLight rounded-md flex flex-col items-center p-2">
+        {/* 출근 시간 분포 (BarChart) */}
+        <div className="flex-1 min-w-[180px] bg-github-card border border-thin border-github-border rounded-md flex flex-col items-center p-2">
           <h3 className="text-github-text text-xs font-medium mb-2 text-center">🌅 출근 시간 분포</h3>
-          <PolarArea
+          <Bar
             data={{
-              labels: Array.from({ length: 24 }, (_, i) => `${i}시`),
+              labels: commuteTimesGo.map((t) => `${t.hour}시`),
               datasets: [
                 {
                   label: '출근',
-                  data: Array.from({ length: 24 }, (_, hour) =>
-                    stats.commuteTimesGo.find((t) => t.hour === hour)?.count || 0
-                  ),
-                  backgroundColor: Array.from({ length: 24 }, (_, i) =>
-                    `rgba(34,197,94,${0.3 + 0.7 * (i / 23)})`
-                  ),
-                  borderColor: 'rgba(34,197,94,1)',
+                  data: commuteTimesGo.map((t) => t.count),
+                  backgroundColor: 'rgba(156,163,175,0.7)', // gray-400
+                  borderColor: 'rgba(75,85,99,1)', // gray-600
                   borderWidth: 1,
+                  borderRadius: 8,
+                  maxBarThickness: 32,
                 },
               ],
             }}
@@ -259,42 +215,51 @@ export default function StatsChart({ commutes, moods, myUuid }: StatsChartProps)
               responsive: true,
               plugins: {
                 legend: { display: false },
-                tooltip: {
-                  backgroundColor: '#161b22',
-                  titleColor: '#c9d1d9',
-                  bodyColor: '#c9d1d9',
-                  borderColor: '#21262d',
-                  borderWidth: 1,
-                },
+                datalabels: {
+                  anchor: 'end',
+                  align: 'end',
+                  color: '#111',
+                  font: { weight: 'bold', size: 14 },
+                  formatter: (value: number) => {
+                    return `🚶‍♂️ ${value}`;
+                  },
+                } as DatalabelsOptions,
               },
               scales: {
-                r: {
-                  grid: { color: '#333' },
-                  pointLabels: { color: '#c9d1d9', font: { size: 10 } },
-                  ticks: { color: '#8b949e', backdropColor: 'transparent', stepSize: 1 },
+                x: {
+                  grid: { display: false },
+                  ticks: { color: '#6b7280', font: { size: 12 } },
+                },
+                y: {
+                  beginAtZero: true,
+                  grid: { color: '#e5e7eb' },
+                  ticks: { color: '#6b7280', stepSize: 1 },
                 },
               },
             }}
-            style={{ maxWidth: 160, margin: '0 auto' }}
+            plugins={[ChartDataLabels.default]}
+            style={{ maxHeight: 180, maxWidth: 220, margin: '0 auto' }}
           />
+          {/* 범례 */}
+          <div className="flex justify-center gap-2 mt-2 text-xs">
+            <span className="flex items-center gap-1"><span>🚶‍♂️</span>출근자</span>
+          </div>
         </div>
-        {/* 퇴근 시간 분포 (PolarArea) */}
-        <div className="flex-1 min-w-[180px] bg-github-card border border-thin border-github-borderLight rounded-md flex flex-col items-center p-2">
+        {/* 퇴근 시간 분포 (BarChart) */}
+        <div className="flex-1 min-w-[180px] bg-github-card border border-thin border-github-border rounded-md flex flex-col items-center p-2">
           <h3 className="text-github-text text-xs font-medium mb-2 text-center">🌙 퇴근 시간 분포</h3>
-          <PolarArea
+          <Bar
             data={{
-              labels: Array.from({ length: 24 }, (_, i) => `${i}시`),
+              labels: commuteTimesLeave.map((t) => `${t.hour}시`),
               datasets: [
                 {
                   label: '퇴근',
-                  data: Array.from({ length: 24 }, (_, hour) =>
-                    stats.commuteTimesLeave.find((t) => t.hour === hour)?.count || 0
-                  ),
-                  backgroundColor: Array.from({ length: 24 }, (_, i) =>
-                    `rgba(139,92,246,${0.3 + 0.7 * (i / 23)})`
-                  ),
-                  borderColor: 'rgba(139,92,246,1)',
+                  data: commuteTimesLeave.map((t) => t.count),
+                  backgroundColor: 'rgba(209,213,219,0.7)', // gray-200
+                  borderColor: 'rgba(107,114,128,1)', // gray-500
                   borderWidth: 1,
+                  borderRadius: 8,
+                  maxBarThickness: 32,
                 },
               ],
             }}
@@ -302,29 +267,40 @@ export default function StatsChart({ commutes, moods, myUuid }: StatsChartProps)
               responsive: true,
               plugins: {
                 legend: { display: false },
-                tooltip: {
-                  backgroundColor: '#161b22',
-                  titleColor: '#c9d1d9',
-                  bodyColor: '#c9d1d9',
-                  borderColor: '#21262d',
-                  borderWidth: 1,
-                },
+                datalabels: {
+                  anchor: 'end',
+                  align: 'end',
+                  color: '#111',
+                  font: { weight: 'bold', size: 14 },
+                  formatter: (value: number) => {
+                    return `🏠 ${value}`;
+                  },
+                } as DatalabelsOptions,
               },
               scales: {
-                r: {
-                  grid: { color: '#333' },
-                  pointLabels: { color: '#c9d1d9', font: { size: 10 } },
-                  ticks: { color: '#8b949e', backdropColor: 'transparent', stepSize: 1 },
+                x: {
+                  grid: { display: false },
+                  ticks: { color: '#6b7280', font: { size: 12 } },
+                },
+                y: {
+                  beginAtZero: true,
+                  grid: { color: '#e5e7eb' },
+                  ticks: { color: '#6b7280', stepSize: 1 },
                 },
               },
             }}
-            style={{ maxWidth: 160, margin: '0 auto' }}
+            plugins={[ChartDataLabels.default]}
+            style={{ maxHeight: 180, maxWidth: 220, margin: '0 auto' }}
           />
+          {/* 범례 */}
+          <div className="flex justify-center gap-2 mt-2 text-xs">
+            <span className="flex items-center gap-1"><span>🏠</span>퇴근자</span>
+          </div>
         </div>
       </div>
 
       {/* 빈 상태 */}
-      {stats.totalUsers === 0 && (
+      {totalUsers === 0 && (
         <div className="text-center py-8">
           <div className="text-4xl mb-4">📈</div>
           <div className="text-github-muted">
