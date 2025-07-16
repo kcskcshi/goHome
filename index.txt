@@ -1,22 +1,26 @@
 1:"$Sreact.fragment"
-2:I[7555,[],""]
-3:I[1295,[],""]
-4:I[894,[],"ClientPageRoot"]
-5:I[5482,["647","static/chunks/ca377847-1b40341fd7daf2c3.js","277","static/chunks/277-9852fd43da8910cd.js","745","static/chunks/745-2d448eab667a19e3.js","974","static/chunks/app/page-8ce0627906fc9f13.js"],"default"]
-8:I[9665,[],"OutletBoundary"]
-b:I[4911,[],"AsyncMetadataOutlet"]
-d:I[9665,[],"ViewportBoundary"]
-f:I[9665,[],"MetadataBoundary"]
-11:I[6614,[],""]
-:HL["/goHome/_next/static/css/189f557d78349fb0.css","style"]
-0:{"P":null,"b":"ZWJqNomSPCz5rYGNJpDya","p":"/goHome","c":["",""],"i":false,"f":[[["",{"children":["__PAGE__",{}]},"$undefined","$undefined",true],["",["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/goHome/_next/static/css/189f557d78349fb0.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}]],["$","html",null,{"lang":"ko","className":"dark","children":["$","body",null,{"className":"__variable_7cbe71 __variable_052d78 antialiased bg-github-bg text-github-text","children":["$","$L2",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L3",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":[[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":404}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],[]],"forbidden":"$undefined","unauthorized":"$undefined"}]}]}]]}],{"children":["__PAGE__",["$","$1","c",{"children":[["$","$L4",null,{"Component":"$5","searchParams":{},"params":{},"promises":["$@6","$@7"]}],null,["$","$L8",null,{"children":["$L9","$La",["$","$Lb",null,{"promise":"$@c"}]]}]]}],{},null,false]},null,false],["$","$1","h",{"children":[null,["$","$1","fDKwr5MCod7WLjn5Yvejxv",{"children":[["$","$Ld",null,{"children":"$Le"}],null]}],["$","$Lf",null,{"children":"$L10"}]]}],false]],"m":"$undefined","G":["$11","$undefined"],"s":false,"S":true}
-12:"$Sreact.suspense"
-13:I[4911,[],"AsyncMetadata"]
-6:{}
-7:{}
-10:["$","div",null,{"hidden":true,"children":["$","$12",null,{"fallback":null,"children":["$","$L13",null,{"promise":"$@14"}]}]}]
-a:null
-e:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]
-9:null
-c:{"metadata":[["$","title","0",{"children":"아 집에가고싶다 - 직장인 출퇴근 공유 플랫폼"}],["$","meta","1",{"name":"description","content":"오늘도 출근했습니다. 그리고 기분은요... 직장인들의 출퇴근과 기분을 공유하는 플랫폼입니다."}],["$","meta","2",{"name":"author","content":"아 집에가고싶다"}],["$","meta","3",{"name":"keywords","content":"출근, 퇴근, 직장인, 기분공유, 출퇴근기록"}],["$","link","4",{"rel":"icon","href":"/goHome/favicon.ico","type":"image/x-icon","sizes":"16x16"}]],"error":null,"digest":"$undefined"}
-14:{"metadata":"$c:metadata","error":null,"digest":"$undefined"}
+2:I[67280,["131","static/chunks/131-9874fd860e3d9d36.js","322","static/chunks/322-a896591dc4f7c363.js","716","static/chunks/716-d7a7ef163f504a4f.js","177","static/chunks/app/layout-640cb884932cc37a.js"],"ThemeProvider"]
+3:I[5200,["131","static/chunks/131-9874fd860e3d9d36.js","322","static/chunks/322-a896591dc4f7c363.js","716","static/chunks/716-d7a7ef163f504a4f.js","177","static/chunks/app/layout-640cb884932cc37a.js"],"SupabaseProvider"]
+4:I[93506,["131","static/chunks/131-9874fd860e3d9d36.js","322","static/chunks/322-a896591dc4f7c363.js","716","static/chunks/716-d7a7ef163f504a4f.js","177","static/chunks/app/layout-640cb884932cc37a.js"],"default"]
+5:I[87555,[],""]
+6:I[31295,[],""]
+7:I[89074,["131","static/chunks/131-9874fd860e3d9d36.js","322","static/chunks/322-a896591dc4f7c363.js","716","static/chunks/716-d7a7ef163f504a4f.js","177","static/chunks/app/layout-640cb884932cc37a.js"],"Toaster"]
+8:I[90894,[],"ClientPageRoot"]
+9:I[43606,["131","static/chunks/131-9874fd860e3d9d36.js","281","static/chunks/281-a6910ae8ff44ca04.js","322","static/chunks/322-a896591dc4f7c363.js","291","static/chunks/291-62d6d6829cd83f07.js","261","static/chunks/261-74e762dfc1a08ff7.js","974","static/chunks/app/page-fae5d67962c28a64.js"],"default"]
+c:I[59665,[],"OutletBoundary"]
+f:I[74911,[],"AsyncMetadataOutlet"]
+11:I[59665,[],"ViewportBoundary"]
+13:I[59665,[],"MetadataBoundary"]
+15:I[26614,[],""]
+:HL["/goHome/_next/static/css/eefaae10c4a6d371.css","style"]
+0:{"P":null,"b":"Wrdasi4skZ_1w5ybq4LYm","p":"/goHome","c":["",""],"i":false,"f":[[["",{"children":["__PAGE__",{}]},"$undefined","$undefined",true],["",["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/goHome/_next/static/css/eefaae10c4a6d371.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}]],["$","html",null,{"lang":"ko","suppressHydrationWarning":true,"children":["$","body",null,{"className":"min-h-screen bg-background font-sans antialiased __variable_f57d82","children":["$","$L2",null,{"attribute":"class","defaultTheme":"dark","enableSystem":true,"disableTransitionOnChange":true,"children":["$","$L3",null,{"children":[["$","$L4",null,{}],["$","$L5",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L6",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":[[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":404}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],[]],"forbidden":"$undefined","unauthorized":"$undefined"}],["$","$L7",null,{}]]}]}]}]}]]}],{"children":["__PAGE__",["$","$1","c",{"children":[["$","$L8",null,{"Component":"$9","searchParams":{},"params":{},"promises":["$@a","$@b"]}],null,["$","$Lc",null,{"children":["$Ld","$Le",["$","$Lf",null,{"promise":"$@10"}]]}]]}],{},null,false]},null,false],["$","$1","h",{"children":[null,["$","$1","PGbZhIjqV7p_sUjG4A9bFv",{"children":[["$","$L11",null,{"children":"$L12"}],null]}],["$","$L13",null,{"children":"$L14"}]]}],false]],"m":"$undefined","G":["$15","$undefined"],"s":false,"S":true}
+16:"$Sreact.suspense"
+17:I[74911,[],"AsyncMetadata"]
+a:{}
+b:{}
+14:["$","div",null,{"hidden":true,"children":["$","$16",null,{"fallback":null,"children":["$","$L17",null,{"promise":"$@18"}]}]}]
+e:null
+12:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]
+d:null
+10:{"metadata":[["$","title","0",{"children":"아 집에가고싶다 - 직장인 출퇴근 공유 플랫폼"}],["$","meta","1",{"name":"description","content":"오늘도 출근했습니다. 그리고 기분은요... 직장인들의 출퇴근과 기분을 공유하는 플랫폼입니다."}],["$","meta","2",{"name":"author","content":"아 집에가고싶다"}],["$","meta","3",{"name":"keywords","content":"출근, 퇴근, 직장인, 기분공유, 출퇴근기록"}],["$","link","4",{"rel":"icon","href":"/goHome/favicon.ico","type":"image/x-icon","sizes":"16x16"}]],"error":null,"digest":"$undefined"}
+18:{"metadata":"$10:metadata","error":null,"digest":"$undefined"}
