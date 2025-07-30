@@ -82,35 +82,35 @@ export default function StatsDashboard() {
   return (
     <div className="container mx-auto px-4 py-10 max-w-5xl">
       {/* 상단 요약 */}
-      <Card className="rounded-2xl bg-zinc-900 border border-zinc-800 shadow-none p-8 max-w-3xl mx-auto mb-8">
+      <Card className="rounded-2xl bg-background border border-gray-700 shadow-none p-8 max-w-3xl mx-auto mb-8">
         <div className="flex justify-between items-center mb-4">
-          <span className="text-base font-semibold flex items-center gap-2 text-white">📅 {mock.date} (화)</span>
-          <span className="text-sm text-zinc-400 flex items-center gap-1">👥 {mock.participants}명</span>
+          <span className="text-base font-semibold flex items-center gap-2 text-foreground">📅 {mock.date} (화)</span>
+          <span className="text-sm text-muted-foreground flex items-center gap-1">👥 {mock.participants}명</span>
         </div>
         <div className="flex flex-col sm:flex-row sm:gap-8 gap-1 text-base mt-2">
-          <span className="flex items-center gap-2 text-zinc-200 text-sm">🌅 <span className="font-medium">출근왕</span> {earlyBird ? earlyBird.nickname : '아직 없음'}
-            {earlyBird && <span className="text-xs text-zinc-500">({earlyBird.time})</span>}
+          <span className="flex items-center gap-2 text-foreground text-sm">🌅 <span className="font-medium">출근왕</span> {earlyBird ? earlyBird.nickname : '아직 없음'}
+            {earlyBird && <span className="text-xs text-muted-foreground">({earlyBird.time})</span>}
           </span>
-          <span className="flex items-center gap-2 text-zinc-200 text-sm">🌙 <span className="font-medium">칼퇴왕</span> {nightOwl ? nightOwl.nickname : '아직 없음'}
-            {nightOwl && <span className="text-xs text-zinc-500">({nightOwl.time})</span>}
+          <span className="flex items-center gap-2 text-foreground text-sm">🌙 <span className="font-medium">칼퇴왕</span> {nightOwl ? nightOwl.nickname : '아직 없음'}
+            {nightOwl && <span className="text-xs text-muted-foreground">({nightOwl.time})</span>}
           </span>
         </div>
-        <div className="mt-2 text-sm flex items-center gap-2 text-zinc-400">
+        <div className="mt-2 text-sm flex items-center gap-2 text-muted-foreground">
           🏃‍♂️ {leaveMent}
         </div>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* 감정 분포 카드 */}
-        <Card className="rounded-2xl bg-zinc-900 border border-zinc-800 shadow-none p-6 flex flex-col items-center max-w-xs mx-auto">
-          <div className="text-base font-semibold text-white flex items-center gap-1 mb-1">😊<span>기분분포</span></div>
-          <div className="text-3xl font-bold text-white my-2">{moodTotal}</div>
-          <div className="text-xs text-zinc-400 mb-2">오늘의 감정 참여자 수</div>
+        <Card className="rounded-2xl bg-background border border-gray-700 shadow-none p-6 flex flex-col items-center max-w-xs mx-auto">
+          <div className="text-base font-semibold text-foreground flex items-center gap-1 mb-1">😊<span>기분분포</span></div>
+          <div className="text-3xl font-bold text-foreground my-2">{moodTotal}</div>
+          <div className="text-xs text-muted-foreground mb-2">오늘의 감정 참여자 수</div>
           <div className="flex justify-center items-end gap-1 h-16 mt-4">
             {moodBarHeights.map((h, i) => (
               <div
                 key={i}
-                className={`w-2 rounded-md transition-all duration-300 ${h > 0 ? 'bg-white' : 'bg-zinc-800'}`}
+                className={`w-2 rounded-md transition-all duration-300 ${h > 0 ? 'bg-primary' : 'bg-muted'}`}
                 style={{ height: `${h}px` }}
                 title={moodLabels[i]}
               />
@@ -118,15 +118,15 @@ export default function StatsDashboard() {
           </div>
         </Card>
         {/* 출근시간분포 카드 */}
-        <Card className="rounded-2xl bg-zinc-900 border border-zinc-800 shadow-none p-6 flex flex-col items-center max-w-xs mx-auto">
-          <div className="text-base font-semibold text-white flex items-center gap-1 mb-1">📊<span>출근시간분포</span></div>
-          <div className="text-3xl font-bold text-white my-2">{clockInTotal}</div>
-          <div className="text-xs text-zinc-400 mb-2">오늘의 출근자 수</div>
+        <Card className="rounded-2xl bg-background border border-gray-700 shadow-none p-6 flex flex-col items-center max-w-xs mx-auto">
+          <div className="text-base font-semibold text-foreground flex items-center gap-1 mb-1">📊<span>출근시간분포</span></div>
+          <div className="text-3xl font-bold text-foreground my-2">{clockInTotal}</div>
+          <div className="text-xs text-muted-foreground mb-2">오늘의 출근자 수</div>
           <div className="flex justify-center items-end gap-1 h-16 mt-4">
             {clockInBarHeights.map((h, i) => (
               <div
                 key={i}
-                className={`w-2 rounded-md transition-all duration-300 ${h > 0 ? 'bg-white' : 'bg-zinc-800'}`}
+                className={`w-2 rounded-md transition-all duration-300 ${h > 0 ? 'bg-primary' : 'bg-muted'}`}
                 style={{ height: `${h}px` }}
                 title={clockInDist[i].name}
               />
@@ -134,15 +134,15 @@ export default function StatsDashboard() {
           </div>
         </Card>
         {/* 퇴근시간분포 카드 */}
-        <Card className="rounded-2xl bg-zinc-900 border border-zinc-800 shadow-none p-6 flex flex-col items-center max-w-xs mx-auto">
-          <div className="text-base font-semibold text-white flex items-center gap-1 mb-1">🌙<span>퇴근시간분포</span></div>
-          <div className="text-3xl font-bold text-white my-2">{clockOutTotal}</div>
-          <div className="text-xs text-zinc-400 mb-2">오늘의 퇴근자 수</div>
+        <Card className="rounded-2xl bg-background border border-gray-700 shadow-none p-6 flex flex-col items-center max-w-xs mx-auto">
+          <div className="text-base font-semibold text-foreground flex items-center gap-1 mb-1">🌙<span>퇴근시간분포</span></div>
+          <div className="text-3xl font-bold text-foreground my-2">{clockOutTotal}</div>
+          <div className="text-xs text-muted-foreground mb-2">오늘의 퇴근자 수</div>
           <div className="flex justify-center items-end gap-1 h-16 mt-4">
             {clockOutBarHeights.map((h, i) => (
               <div
                 key={i}
-                className={`w-2 rounded-md transition-all duration-300 ${h > 0 ? 'bg-white' : 'bg-zinc-800'}`}
+                className={`w-2 rounded-md transition-all duration-300 ${h > 0 ? 'bg-primary' : 'bg-muted'}`}
                 style={{ height: `${h}px` }}
                 title={clockOutDist[i].name}
               />

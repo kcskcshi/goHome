@@ -92,6 +92,10 @@ export default function CommantleGame({ uuid, nickname }: { uuid: string, nickna
 
         // 오늘 날짜 기준 메시지/정답 기록 관리 (키워드까지 체크)
         const today = new Date().toISOString().slice(0, 10);
+        
+        // 🔥 핵심 수정: feedback 상태 초기화 추가
+        setFeedback(null);
+        
         // commantle-messages: 오늘 날짜만 남기고 나머지 삭제
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
@@ -155,10 +159,11 @@ export default function CommantleGame({ uuid, nickname }: { uuid: string, nickna
     setMessages(next);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     setInput('');
-    // 오답 카운트 증가 및 힌트 카운트 관리
+    // 🔥 핵심 수정: 재시도 카운트 로직 개선
     if (sim < 1.0) {
-      const newHintCount = messages.length + 1;
-      if (newHintCount >= 30 && hintCount === 0) {
+      // 오늘의 재시도 횟수 = 오늘 메시지 개수
+      const todayRetryCount = next.length;
+      if (todayRetryCount >= 30 && hintCount === 0) {
         setHintCount(1);
         localStorage.setItem(HINT_KEY, JSON.stringify({ date: today, count: 1 }));
       }
